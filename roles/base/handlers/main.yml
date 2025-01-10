@@ -1,0 +1,10 @@
+#SPDX-License-Identifier: MIT-0
+---
+# handlers file for base
+- name: Upgrade all installed packages
+  ansible.builtin.apt:
+    upgrade: dist
+  register: upgrade_result
+  retries: 3
+  delay: 5
+  until: upgrade_result is success

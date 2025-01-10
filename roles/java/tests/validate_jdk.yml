@@ -1,0 +1,29 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for java
+- name: Set the JDK version
+  ansible.builtin.set_fact:
+    current_jdk_package: "{{ java_jdk_versions[jdk_version].package }}"
+    current_jdk_version: "{{ java_jdk_versions[jdk_version].version }}"
+
+- name: Verify the current JDK package installation
+  ansible.builtin.package:
+    name: "{{ current_jdk_package }}"
+    state: present
+
+- name: Verify environment JDK version
+  ansible.builtin.command: java -version
+  register: java_output
+  failed_when: java_output.rc != 0
+  changed_when: false
+
+- name: Validate JDK version output
+  ansible.builtin.debug:
+    msg: 
+      - "Expected JDK: {{ current_jdk_version }}, Installed JDK Output: {{ java_output.stderr_lines | join(' ') }}"
+      - "Debug version match: {{ jdk_version_match }}"
+      - "Debug output: {{ java_output.stderr_lines | join(' ') }}"
+  vars:
+    # Define a mapping to validate against expected output for each version
+    jdk_version_match: "{{ current_jdk_version | regex_replace('openjdk-([0-9]+)-jdk', 'openjdk version \\1') }}"
+  failed_when: not (jdk_version_match in java_output.stderr_lines | join(' '))

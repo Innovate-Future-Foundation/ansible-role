@@ -1,0 +1,11 @@
+---
+- name: Provision Jenkins
+  hosts: jenkins_servers
+  become: yes
+  roles:
+    - role: ansible-role-jenkins
+      vars:
+        jenkins_plugins:
+          - git
+          - pipeline
+        ssl_domain: your.domain.com

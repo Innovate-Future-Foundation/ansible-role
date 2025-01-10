@@ -1,0 +1,47 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Base role test
+  hosts: localhost
+  become: yes
+  roles:
+    - base
+
+  tasks:
+    - name: Check if the APT package cache was updated
+      ansible.builtin.apt:
+        update_cache: yes
+      register: apt_update
+
+    - name: Display APT update result
+      ansible.builtin.debug:
+        var: apt_update
+
+    - name: Check if all installed packages were upgraded
+      ansible.builtin.apt:
+        upgrade: dist
+      register: apt_upgrade_simulation
+
+    - name: Display APT upgrade simulation result
+      ansible.builtin.debug:
+        var: apt_upgrade_simulation.stdout_lines
+    
+    - name: Check if the base packages are installed
+      ansible.builtin.shell:
+        cmd: dpkg -l | grep -E 'curl|net-tools|git|jq'
+      register: package_check
+      changed_when: false
+      failed_when: package_check.rc != 0
+
+    - name: Display base package installation check result
+      ansible.builtin.debug:
+        var: package_check.stdout_lines
+
+    - name: Check if a reboot is needed
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_check
+
+    - name: Display reboot status
+      ansible.builtin.debug:
+        msg: >
+          "Reboot is {{ 'required' if reboot_check.stat.exists else 'not required' }}."

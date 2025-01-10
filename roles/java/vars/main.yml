@@ -1,0 +1,13 @@
+#SPDX-License-Identifier: MIT-0
+---
+# vars file for java
+java_jdk_versions:
+  openjdk-8: 
+    package: openjdk-8-jdk
+    version: 1.8
+  openjdk-11:
+    package: openjdk-11-jdk
+    version: 11
+  openjdk-17:
+    package: openjdk-17-jdk
+    version: 17

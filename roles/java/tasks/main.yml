@@ -1,0 +1,69 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for java
+- name: Output all available JDK version
+  ansible.builtin.debug:
+    msg: >
+      "Available JDK Versions: {{ java_jdk_versions }}"
+
+- name: Output the expected JDK version
+  ansible.builtin.debug:
+    msg: >
+      "Expected JDK Version: {{ java_jdk_versions[jdk_version].version }}"
+  
+- name: Check if JDK is installed
+  ansible.builtin.command: java -version
+  register: java_version
+  ignore_errors: yes
+  changed_when: false
+
+- name: Get installed the packages 
+  ansible.builtin.package_facts:
+    manager: auto
+  when: java_version.rc == 0
+
+- name: Extract installed JDK version
+  ansible.builtin.set_fact:
+    installed_jdk_package: >-
+      {{
+        (ansible_facts.packages.keys() | select('search', 'jdk') | list | first) 
+        if (ansible_facts.packages.keys() | select('search', 'jdk') | list | length > 0)
+        else ''
+      }}
+  when: java_version.rc == 0
+
+- name: Set the expected JDK package
+  ansible.builtin.set_fact:
+    expected_jdk_package: "{{ java_jdk_versions[jdk_version].package }}"
+
+- name: Compare installed and expected JDK packages
+  ansible.builtin.set_fact:
+    jdk_version_match: "{{ installed_jdk_package == expected_jdk_package }}"
+  when: installed_jdk_package is defined and installed_jdk_package | length > 0 
+
+- name: Debug installed vs. expected JDK packages
+  ansible.builtin.debug:
+    msg: >
+      "Installed JDK Package: {{ installed_jdk_package }}, Expected JDK Package: {{ expected_jdk_package }}"
+  when: installed_jdk_package is defined and installed_jdk_package | length > 0 
+
+- name: Uninstall JDK if version is incorrect
+  ansible.builtin.package:
+    name: "{{ installed_jdk_package }}"
+    state: absent
+  when: 
+    - installed_jdk_package is defined and installed_jdk_package | length > 0 
+    - not jdk_version_match
+
+- name: Install JDK if not installed or version is incorrect
+  ansible.builtin.package:
+    name: "{{ expected_jdk_package }}"
+    state: present
+  when: 
+    - installed_jdk_package is undefined or not jdk_version_match
+
+- name: Verify JDK installation
+  ansible.builtin.command: java -version
+  register: java_version
+  failed_when: java_version.rc != 0
+  changed_when: false

@@ -1,0 +1,8 @@
+- name: Installed JDK
+  hosts: test
+  become: yes
+  vars:
+    jdk_version: openjdk-17
+  roles:
+    - role: base
+    # - role: java
