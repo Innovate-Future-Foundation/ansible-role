@@ -2,7 +2,7 @@
   hosts: test
   become: yes
   vars:
-    jdk_version: openjdk-17
+    jdk_version: openjdk-21
   roles:
     - role: base
-    # - role: java
+    - role: java

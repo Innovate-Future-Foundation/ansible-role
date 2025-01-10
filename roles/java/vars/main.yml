@@ -11,3 +11,6 @@ java_jdk_versions:
   openjdk-17:
     package: openjdk-17-jdk
     version: 17
+  openjdk-21:
+    package: openjdk-21-jdk
+    version: 21
