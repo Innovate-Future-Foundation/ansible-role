@@ -9,25 +9,22 @@ Requirements
 - Ansible 2.16 or higher installed on the control node.
 - An Ubuntu server with `sudo` privileges.
 
+> [!TIP]
+> For local tests, you may use the `tests/docker-compose.yml` file to start a Ubuntu 24.04 container.
+
 How to Use
 ------------
 1. Clone this repository to your Ansible roles directory:
     ```bash
-    git clone <repository_url> ansible-role-jenkins
+    git clone https://github.com/Innovate-Future-Foundation/ansible-role-jenkins.git ansible-role-jenkins
     ```
 
-2. Add this role to your playbook:
-    ```yaml
-    - hosts: jenkins_servers
-      become: yes
-      roles:
-        - role: ansible-role-jenkins
-          vars:
-            jenkins_plugins:
-              - git
-              - pipeline
-            ssl_domain: your.domain.com
+2. Create an `inventory` file:
     ```
+    [test_ubuntu]
+    localhost ansible_user=root ansible_port=23 ansible_ssh_private_key_file=~/.ssh/id_rsa ansible_ssh_extra_args='-o StrictHostKeyChecking=no'
+    ```
+    For detailed inventory file configurations, see [Ansible doc](https://docs.ansible.com/ansible/latest/inventory_guide/intro_inventory.html#how-to-build-your-inventory).
 
 3. Run the playbook:
     ```bash
@@ -38,7 +35,36 @@ File Structure
 ------------
 ```mermaid
 graph LR
-    A[ANSIBLE-ROLE-JENKINS] --> B[defaults/]
+    A[ansbile-role-jenkins] --> B[roles]
+    B --> B1[base]
+    B --> B2[java]
+    B --> B3[jenkins]
+    B --> B4[...]
+    A --> C[tests]
+    A --> .ansible-lint.yml
+    A --> ansible.cfg
+```
+
+Directories
+------------
+The following is a breakdown of the key files and directories in this role:
+
+- **`roles/`**: Contains the flexibility roles for configuring Jenkins server.
+- **`tests/`**: Integration tests for combined roles.
+- **`.ansible-lint.yml`**: Contains `ansible-lint` configurations. Use below command to run lint
+  ```shell
+  ansible-lint -c .ansible-lint.yml
+  ```
+- **`ansible.cfg`**: Ansible Configuration Settings file, see [Ansible doc](https://docs.ansible.com/ansible/latest/reference_appendices/config.html#ansible-configuration-settings). Configure environment variable using the below command or you can also configure in OS profile or user profile.
+  ```shell
+  export ANSIBLE_CONFIG=/path/to/your/ansible.cfg
+  ```
+
+Role Directories
+------------
+```mermaid
+graph LR
+    A[roles] --> B[defaults/]
     A --> C[files/]
     A --> D[handlers/]
     A --> E[meta/]
@@ -51,15 +77,6 @@ graph LR
     A --> J[LICENSE]
     A --> K[README.md]
 ```
-
-Variables
-------------
-Key variables you can override in your playbook:
-- `jenkins_plugins`: List of Jenkins plugins to install.
-- `ssl_domain`: Domain name for SSL certificate generation.
-
-Directories
-------------
 The following is a breakdown of the key files and directories in this role:
 
 - **`defaults/`**: Contains default variables used in the role.
@@ -69,6 +86,11 @@ The following is a breakdown of the key files and directories in this role:
 - **`templates/`**: Stores Jinja2 templates for dynamic file generation.
 - **`tests/`**: Includes test playbooks for validating the role.
 - **`vars/`**: Contains role-specific variables.
+
+For each role, you can use the below command to create the file structure.
+```shell
+ansible-galaxy init [role_name]
+```
 
 Role Variables
 --------------
