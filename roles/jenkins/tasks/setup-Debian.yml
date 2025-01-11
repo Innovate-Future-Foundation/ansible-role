@@ -1,0 +1,47 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for jenkins installation on Debian
+- name: Download Jenkins GPG key
+  ansible.builtin.get_url:
+    url: "{{ jenkins_repo_key_url }}"
+    dest: "{{ jenkins_local_gpg_key }}"
+    mode: '0644'
+    force: true
+
+- name: Add Jenkins repository
+  ansible.builtin.apt_repository:
+    repo: "{{ jenkins_repo_url }}"
+    state: present
+    update_cache: yes
+  when: jenkins_repo_url | default(false)
+
+- name: Install Jenkins
+  ansible.builtin.apt:
+    name: jenkins
+    state: present
+
+- name: Start and enable Jenkins service
+  ansible.builtin.service:
+    name: jenkins
+    pattern: /usr/share/java/jenkins.war
+    state: started
+    enabled: yes
+    use: service
+
+- name: Check if Jenkins initial admin password file exists
+  ansible.builtin.stat:
+    path: /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_password_file
+  changed_when: false
+  retries: 3
+  delay: 5
+  until: jenkins_password_file.stat.exists
+
+- name: Output Jenkins initial admin password
+  ansible.builtin.command: cat /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_admin_password
+  changed_when: false
+
+- name: Debug Jenkins initial admin password
+  ansible.builtin.debug:
+    msg: "Jenkins initial admin password: {{ jenkins_admin_password.stdout }}"

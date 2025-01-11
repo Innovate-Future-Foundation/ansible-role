@@ -9,12 +9,9 @@
 
 - name: Ensure base set of packages are installed
   ansible.builtin.apt:
-    name:
-      - curl
-      - net-tools
-      - git
-      - jq
-    state: latest
+    name: "{{ item.name }}={{ item.version }}"
+    state: present
+  loop: "{{ base_packages }}"
 
 # - name: enable ssh service on boot
 #   service:

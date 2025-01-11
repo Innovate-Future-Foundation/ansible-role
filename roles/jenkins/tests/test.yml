@@ -1,0 +1,74 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Jenkins role test
+  hosts: localhost
+  remote_user: root
+  roles:
+    - base
+    - java
+    - jenkins
+  vars:
+    jdk_version: openjdk-21
+
+  tasks:
+    - name: Check if the APT package cache was updated
+      ansible.builtin.apt:
+        update_cache: yes
+      register: apt_update
+
+    - name: Display APT update result
+      ansible.builtin.debug:
+        var: apt_update
+
+    - name: Display APT upgrade simulation result
+      ansible.builtin.debug:
+        var: apt_upgrade_simulation.stdout_lines
+
+    - name: Collect package facts
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: Verify installed Jenkins package
+      ansible.builtin.assert:
+        that:
+          - "'jenkins' in ansible_facts.packages"
+        msg: >
+          "Jenkins package is not installed!"
+
+    - name: Check if Jenkins PID file exists
+      ansible.builtin.stat:
+        path: /var/run/jenkins/jenkins.pid
+      register: jenkins_pid_file
+      changed_when: false
+
+    - name: Verify Jenkins process is running
+      ansible.builtin.shell: |
+        bash -o pipefail -c "ps aux | grep -v grep | grep '/usr/share/java/jenkins.war'"
+      register: jenkins_process_check
+      changed_when: false
+      failed_when: "'/usr/share/java/jenkins.war' not in jenkins_process_check.stdout"
+
+    - name: Ensure Jenkins is running
+      ansible.builtin.debug:
+        msg: >
+          Jenkins PID file exists: {{ jenkins_pid_file.stat.exists }},
+          Jenkins process is running: {{ '/usr/share/java/jenkins.war' in jenkins_process_check.stdout }}
+
+    - name: Verify Jenkins service is listening on port 8080
+      ansible.builtin.wait_for:
+        port: 8080
+        state: started
+        delay: 3
+        timeout: 60
+
+    - name: Verify Jenkins initial admin password file exists
+      ansible.builtin.stat:
+        path: /var/lib/jenkins/secrets/initialAdminPassword
+      register: jenkins_admin_password_file
+
+    - name: Verify Jenkins initial admin password file is not empty
+      ansible.builtin.assert:
+        that:
+          - jenkins_admin_password_file.stat.size > 0
+        msg: >
+          "Jenkins initial admin password file is empty!"

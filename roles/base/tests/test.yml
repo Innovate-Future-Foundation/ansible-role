@@ -25,12 +25,34 @@
       ansible.builtin.debug:
         var: apt_upgrade_simulation.stdout_lines
     
-    - name: Check if the base packages are installed
-      ansible.builtin.shell:
-        cmd: dpkg -l | grep -E 'curl|net-tools|git|jq'
-      register: package_check
-      changed_when: false
-      failed_when: package_check.rc != 0
+    - name: Collect package facts
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: Verify installed base packages with specific versions
+      ansible.builtin.assert:
+        that:
+          - item.name in ansible_facts.packages
+          - ansible_facts.packages[item.name][0].version == item.version
+        msg: >
+          "Package {{ item.name }} does not match expected version {{ item.version }}!"
+      with_items: "{{ base_packages }}"
+        
+    # - name: Verify installed base packages with specific versions
+    #   ansible.builtin.shell:
+    #     cmd: >
+    #       bash -c "set -o pipefail &&
+    #       dpkg -l | grep -E '{{ item.name }}' | grep '{{ item.version }}'"
+    #   loop: "{{ base_packages }}"
+    #   register: package_version_check
+    #   changed_when: false
+    #   failed_when: package_version_check.stdout_lines | length == 0
+
+    - name: Display base package version check results
+      ansible.builtin.debug:
+        msg: >
+          "Package: {{ item.name }} - Installed Version Matches: {{ item.version }}"
+      with_items: "{{ base_packages }}"
 
     - name: Display base package installation check result
       ansible.builtin.debug:

@@ -1,0 +1,7 @@
+#SPDX-License-Identifier: MIT-0
+---
+# vars file for jenkins
+__jenkins_repo_url: deb [signed-by={{ jenkins_local_gpg_key }}] https://pkg.jenkins.io/debian{{ '-stable' if (jenkins_prefer_lts | bool) else '' }} binary/
+__jenkins_local_gpg_key: /usr/share/keyrings/jenkins-keyring.asc
+__jenkins_repo_key_url: https://pkg.jenkins.io/debian{{ '-stable' if (jenkins_prefer_lts | bool) else '' }}/jenkins.io-2023.key
+__jenkins_pkg_url: https://pkg.jenkins.io/debian/binary

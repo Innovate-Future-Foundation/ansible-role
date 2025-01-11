@@ -6,6 +6,7 @@ services:
     command: sleep infinity # Keep container running
     ports:
       - "23:22"
+      - "8080:8080"
     restart: no
     volumes:
       - ~/.ssh/id_rsa.pub:/root/authorized_keys:ro # Mount SSH public key
