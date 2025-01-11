@@ -42,17 +42,18 @@
       changed_when: false
 
     - name: Verify Jenkins process is running
-      ansible.builtin.shell: |
-        bash -o pipefail -c "ps aux | grep -v grep | grep '/usr/share/java/jenkins.war'"
-      register: jenkins_process_check
+      ansible.builtin.command: ps aux
+      register: jenkins_ps_output
       changed_when: false
-      failed_when: "'/usr/share/java/jenkins.war' not in jenkins_process_check.stdout"
 
     - name: Ensure Jenkins is running
       ansible.builtin.debug:
         msg: >
           Jenkins PID file exists: {{ jenkins_pid_file.stat.exists }},
-          Jenkins process is running: {{ '/usr/share/java/jenkins.war' in jenkins_process_check.stdout }}
+          Jenkins process is running: {{ '/usr/share/java/jenkins.war' in jenkins_ps_output.stdout }}
+      failed_when: 
+        - not jenkins_pid_file.stat.exists
+        - not jenkins_ps_output.stdout"
 
     - name: Verify Jenkins service is listening on port 8080
       ansible.builtin.wait_for:
