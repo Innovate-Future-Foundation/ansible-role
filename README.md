@@ -83,6 +83,7 @@ The following is a breakdown of the key files and directories in this role:
 - **`files/`**: Includes static files required for configuration.
 - **`handlers/`**: Contains handlers triggered by task notifications, such as restarting services.
 - **`meta/`**: Defines metadata about the role, such as dependencies.
+- **`tasks/`**: This directory is the heart of the Ansible role, containing the primary logic that defines the sequence of actions to be executed. It typically includes a main.yml file, which serves as the entry point for task execution. Tasks in this directory can perform a variety of operations, such as installing packages, configuring services, managing files, and more.
 - **`templates/`**: Stores Jinja2 templates for dynamic file generation.
 - **`tests/`**: Includes test playbooks for validating the role.
 - **`vars/`**: Contains role-specific variables.
@@ -97,19 +98,17 @@ Role Variables
 
 A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
 
-Tasks
+Role Planning
 --------------
-The main functionality is divided into specific task files for modularity:
-- **`install_certbot.yml`**: Installs Certbot and generates SSL certificates.
-- **`install_docker.yml`**: Installs Docker and Docker CLI for containerized environments.
-- **`install_dotnet.yml`**: Installs the .NET SDK and tools like `dotnet-ef`.
-- **`install_jdk.yml`**: Installs OpenJDK required for Jenkins.
-- **`install_jenkins_plugins.yml`**: Installs Jenkins plugins using the Plugin Installation Manager.
-- **`install_nginx.yml`**: Installs and configures Nginx as a reverse proxy for Jenkins.
-- **`install_nodeJs.yml`**: Installs Node.js for JavaScript-based tooling.
-- **`setup_Ubuntu.yml`**: Prepares the Ubuntu environment by installing essential packages.
-- **`settings.yml`**: Configures environment-specific settings.
-- **`main.yml`**: The entry point for executing all tasks in this role.
+The followings are the planned roles needed for this project:
+- [x] **`base`**: Configures OS level settings. Installs dependency software.
+- [x] **`java`**: Installs the OpenJDK according to selected version.
+- [x] **`jenkins`**: Installs Jenkins service. Configure Jenkins. Install Jenkins plugins.
+- [ ] **`certibot`**: Installs certibot, configure self-signed certificate.
+- [ ] **`nginx`**: Installs Nginx service, configure Nginx to expose secure HTTPS port, proxy for backend Jenkins service.
+- [ ] **`nodejs`**: Installs Node.js for frontend code build environment.
+- [ ] **`dotnet`**: Installs DotNet for backend code build environment.
+- [ ] **`dotnet-ef`**: Installs DotNet Entity Framework tool for database migration.
 
 Dependencies
 ------------
@@ -119,11 +118,24 @@ A list of other roles hosted on Galaxy should go here, plus any details in regar
 Example Playbook
 ----------------
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+Below is an example of how to use your role:
+```yaml
+- name: Installed JDK
+  hosts: test
+  become: yes
+  vars:
+    jdk_version: openjdk-21
+  roles:
+    - role: base
+    - role: java
+    - role: jenkins
+```
+In the example, defined an override variable `jdk_version` passed to the java role task.
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+In the provided playbook, the roles and their respective tasks perform the following:
+- `base`: Sets up essential system configurations and ensures the environment is ready for further installations.
+- `java`: Installs the specified version of JDK (openjdk-21) and ensures the system's Java environment is properly configured.
+- `jenkins`: Installs Jenkins, configures its dependencies, and ensures the service is running.
 
 License
 -------
