@@ -20,6 +20,7 @@
     name: jenkins
     state: "{{ jenkins_package_state }}"
 
+# If the output is systemd, then the system is using systemd as the init system. Otherwise without systemd.
 - name: Check if systemd is the active init system
   ansible.builtin.shell: "ps -p 1 -o comm="
   register: active_init_system
