@@ -1,0 +1,9 @@
+---
+- name: restart jenkins via service
+  ansible.builtin.service:
+    name: jenkins
+    state: restarted
+  when: jenkins_restart_behavior == 'service'
+
+- name: safe-restart jenkins via CLI
+  ansible.builtin.command: 

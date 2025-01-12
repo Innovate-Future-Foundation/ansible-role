@@ -1,0 +1,18 @@
+---
+- name: Check if Jenkins initial admin password file exists
+  ansible.builtin.stat:
+    path: /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_password_file
+  changed_when: false
+  retries: 3
+  delay: 5
+  until: jenkins_password_file.stat.exists
+
+- name: Output Jenkins initial admin password
+  ansible.builtin.command: cat /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_admin_password
+  changed_when: false
+
+- name: Debug Jenkins initial admin password
+  ansible.builtin.debug:
+    msg: "Jenkins initial admin password: {{ jenkins_admin_password.stdout }}"

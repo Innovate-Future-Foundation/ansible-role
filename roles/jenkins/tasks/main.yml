@@ -28,3 +28,5 @@
   ansible.builtin.include_tasks: setup-Debian.yml
   when: ansible_os_family == 'Debian'
 
+- name: Configure Jenkins settings
+  ansible.builtin.include_tasks: settings.yml

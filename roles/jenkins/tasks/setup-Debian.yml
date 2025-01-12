@@ -18,30 +18,25 @@
 - name: Install Jenkins
   ansible.builtin.apt:
     name: jenkins
-    state: present
+    state: "{{ jenkins_package_state }}"
+
+- name: Check if systemd is the active init system
+  ansible.builtin.shell: "ps -p 1 -o comm="
+  register: active_init_system
+  changed_when: false
+
+- name: Debug systemd availability
+  ansible.builtin.debug:
+    msg: "Active init system: {{ active_init_system.stdout.strip() }}"
+
+- name: Overwrite systemd jenkins service file
+  ansible.builtin.include_tasks: overwrite-systemd-service.yml
+  when: active_init_system.stdout.strip() != 'systemd'
 
 - name: Start and enable Jenkins service
   ansible.builtin.service:
     name: jenkins
-    pattern: /usr/share/java/jenkins.war
+    # pattern: /usr/share/java/jenkins.war
     state: started
     enabled: yes
     use: service
-
-- name: Check if Jenkins initial admin password file exists
-  ansible.builtin.stat:
-    path: /var/lib/jenkins/secrets/initialAdminPassword
-  register: jenkins_password_file
-  changed_when: false
-  retries: 3
-  delay: 5
-  until: jenkins_password_file.stat.exists
-
-- name: Output Jenkins initial admin password
-  ansible.builtin.command: cat /var/lib/jenkins/secrets/initialAdminPassword
-  register: jenkins_admin_password
-  changed_when: false
-
-- name: Debug Jenkins initial admin password
-  ansible.builtin.debug:
-    msg: "Jenkins initial admin password: {{ jenkins_admin_password.stdout }}"

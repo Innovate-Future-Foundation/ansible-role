@@ -1,0 +1,38 @@
+# For Jenkins running in Ubuntu docker container, without systemd or journalctl support, 
+# the Jenkins init script is used to manage the Jenkins service.
+# The init script is located at /etc/init.d/jenkins. The init script is used to start, stop, and check the status of the Jenkins service. 
+# The init script is also used to manage the Jenkins service during system boot.
+---
+- name: Backup the original Jenkins init script
+  ansible.builtin.copy:
+    src: /etc/init.d/jenkins
+    dest: /etc/init.d/jenkins.bak
+    remote_src: yes
+    backup: yes
+
+- name: Overwrite the do_status_override function in Jenkins init script
+  ansible.builtin.lineinfile:
+    path: /etc/init.d/jenkins
+    regexp: '^do_status_override\\(\\) {.*?^}'
+    state: absent
+
+- name: Add the updated do_status_override function
+  ansible.builtin.blockinfile:
+    path: /etc/init.d/jenkins
+    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+    block: |
+      do_status_override() {
+          PID=$(pgrep -f "/usr/share/java/jenkins.war")
+          if [ -n "${PID}" ]; then
+              echo "Jenkins is running (PID: ${PID})"
+              return 0
+          else
+              echo "Jenkins is not running"
+              return 1
+          fi
+      }
+
+- name: Make the Jenkins init script executable
+  ansible.builtin.file:
+    path: /etc/init.d/jenkins
+    mode: '0755'
