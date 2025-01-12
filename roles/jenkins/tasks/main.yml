@@ -30,3 +30,5 @@
 
 - name: Configure Jenkins settings
   ansible.builtin.include_tasks: settings.yml
+
+  

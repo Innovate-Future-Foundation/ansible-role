@@ -9,6 +9,7 @@
     dest: /etc/init.d/jenkins.bak
     remote_src: yes
     backup: yes
+    mode: '0644'
 
 - name: Overwrite the do_status_override function in Jenkins init script
   ansible.builtin.lineinfile:

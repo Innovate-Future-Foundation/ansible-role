@@ -22,7 +22,7 @@
 
 # If the output is systemd, then the system is using systemd as the init system. Otherwise without systemd.
 - name: Check if systemd is the active init system
-  ansible.builtin.shell: "ps -p 1 -o comm="
+  ansible.builtin.command: "ps -p 1 -o comm="
   register: active_init_system
   changed_when: false
 
@@ -41,3 +41,4 @@
     state: started
     enabled: yes
     use: service
+  notify: Configure default users
