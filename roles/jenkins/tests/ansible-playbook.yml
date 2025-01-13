@@ -1,6 +1,5 @@
----
-- name: Installed JDK
-  hosts: test
+- name: Configure Jenkins
+  hosts: all
   become: yes
   vars:
     jdk_version: openjdk-21

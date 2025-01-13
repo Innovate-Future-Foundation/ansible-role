@@ -1,0 +1,4 @@
+---
+- name: Execute configure worker node
+  ansible.builtin.debug:
+    msg: "Configure worker node..."

@@ -1,0 +1,18 @@
+all:
+    children:
+        master:
+            hosts:
+                master-node:
+                    ansible_host: localhost
+                    ansible_user: root
+                    ansible_port: 23
+                    ansible_ssh_private_key_file: ~/.ssh/id_rsa
+                    ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+        worker:
+            hosts:
+                worker-1-node:
+                    ansible_host: localhost
+                    ansible_user: root
+                    ansible_port: 24
+                    ansible_ssh_private_key_file: ~/.ssh/id_rsa
+                    ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
