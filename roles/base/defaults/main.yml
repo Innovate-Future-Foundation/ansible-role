@@ -6,12 +6,17 @@
 # dpkg -l | grep -E 'curl|net-tools|git|jq'
 base_packages:
   - name: curl
-    version: 8.5.0-2ubuntu10.6
+    # version: 8.5.0-2ubuntu10.6
+    version: 7.81.0-1ubuntu1.20
   - name: net-tools
-    version: 2.10-0.1ubuntu4
+    # version: 2.10-0.1ubuntu4
+    version: 1.60+git20181103.0eebece-1ubuntu5
   - name: git
-    version: 1:2.43.0-1ubuntu7.1
+    # version: 1:2.43.0-1ubuntu7.1
+    version: 1:2.34.1-1ubuntu1.11
   - name: jq
-    version: 1.7.1-3build1
+    # version: 1.7.1-3build1
+    version: 1.6-2.1ubuntu3
   - name: lsb-base
-    version: 11.6
+    # version: 11.6
+    version: 11.1.0ubuntu4
