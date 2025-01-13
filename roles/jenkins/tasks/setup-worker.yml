@@ -2,3 +2,31 @@
 - name: Execute configure worker node
   ansible.builtin.debug:
     msg: "Configure worker node..."
+
+- name: Get the master host's hostname
+  ansible.builtin.set_fact:
+    jenkins_master_hostname: "{{ hostvars[groups['master'][0]].ansible_host_alias }}"
+
+- name: Get the jenkins-cli jarfile from the Jenkins server.
+  ansible.builtin.get_url:
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_http_port }}{{ jenkins_url_prefix }}/jnlpJars/jenkins-cli.jar"
+    dest: "{{ jenkins_jar_location }}"
+    mode: 0755
+  register: jarfile_get
+  until: "'OK' in jarfile_get.msg or '304' in jarfile_get.msg or 'file already exists' in jarfile_get.msg"
+  retries: 5
+  delay: 10
+  check_mode: false
+
+- name: Create Jenkins worker node
+  ansible.builtin.command:
+    cmd: "java -jar {{ jenkins_jar_location }} \
+          -auth {{ jenkins_admin_username }}:{{ jenkins_admin_password }} \
+          -s http://{{ jenkins_master_hostname }}:{{ jenkins_http_port }} \
+          -webSocket \
+          create-node {{ inventory_hostname }}"
+    stdin: "{{ lookup('template', 'worker-node.xml.j2') }}"
+  register: jenkins_create_node_result
+  retries: 5
+  delay: 10
+  until: jenkins_create_node_result.rc == 0

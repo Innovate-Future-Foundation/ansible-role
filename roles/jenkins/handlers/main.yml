@@ -1,9 +1,26 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # handlers file for jenkins
-- name: Restart Jenkins
+- name: Restart Jenkins service
   ansible.builtin.include_tasks: tasks/restart.yml
 
 - name: Configure default users
   ansible.builtin.debug:
     msg: "Configure default users"
+
+- name: Configure worker nodes
+  ansible.builtin.include_tasks: tasks/setup-worker.yml
+  when: inventory_hostname in groups['worker']
+
+- name: Ensure Jenkins service is started
+  ansible.builtin.service:
+    name: jenkins
+    state: started
+    enabled: yes
+    use: service
+
+- name: Restart Jenkins if config changes
+  ansible.builtin.set_fact:
+    jenkins_restart_behavior: "service"
+  when: jenkins_config.changed
+  notify: Restart Jenkins service

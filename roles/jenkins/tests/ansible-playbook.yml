@@ -7,3 +7,6 @@
     - role: base
     - role: java
     - role: jenkins
+  # handlers:
+  #   - name: Register handlers
+  #     ansible.builtin.include_tasks: roles/jenkins/handlers/main.yml

@@ -11,24 +11,166 @@
     backup: yes
     mode: '0644'
 
-- name: Overwrite the do_status_override function in Jenkins init script
-  ansible.builtin.lineinfile:
+- name: Insert Jenkins environment variables
+  ansible.builtin.blockinfile:
     path: /etc/init.d/jenkins
-    regexp: '^do_status_override\\(\\) {.*?^}'
-    state: absent
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: Jenkins environment variables"
+    insertafter: '^NAME="jenkins"$'
+    block: |
+      JENKINS_HOME={{ jenkins_home }}
+      JENKINS_USER={{ jenkins_process_user }}
+      JENKINS_GROUP={{ jenkins_process_group }}
+      JENKINS_WAR=/usr/share/java/jenkins.war
+      JENKINS_LOG={{ jenkins_home }}/logs/jenkins.log
+      export JENKINS_LOG
+
+# Overwrite the do_status_override function
+- name: Remove the original do_status_override function
+  ansible.builtin.replace:
+    path: /etc/init.d/jenkins
+    regexp: |
+      ^do_status_override\(\) {(\n|.)*?^}
+    replace: ''
 
 - name: Add the updated do_status_override function
   ansible.builtin.blockinfile:
     path: /etc/init.d/jenkins
-    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: do_status_override"
     block: |
       do_status_override() {
-          PID=$(pgrep -f "/usr/share/java/jenkins.war")
+          check_arguments || return "$?"
+
+          if [ -f "${PIDFILE}" ]; then
+              PID=$(cat "${PIDFILE}")
+              if kill -0 "${PID}" >/dev/null 2>&1; then
+                  echo "Jenkins is running (PID: ${PID})"
+                  return 0
+              else
+                  echo "Jenkins is not running, but PID file exists."
+                  return 1
+              fi
+          else
+              PID=$(pgrep -f "${JENKINS_WAR}")
+              if [ -n "${PID}" ]; then
+                  echo "Jenkins is running (PID: ${PID})"
+                  return 0
+              else
+                  echo "Jenkins is not running"
+                  return 3
+              fi
+          fi
+      }
+
+# Overwrite the do_stop_cmd_override function
+- name: Remove the original do_stop_cmd_override function
+  ansible.builtin.replace:
+    path: /etc/init.d/jenkins
+    regexp: |
+      ^do_stop_cmd_override\(\) {(\n|.)*?^}
+    replace: ''
+
+- name: Add the updated do_stop_cmd_override function
+  ansible.builtin.blockinfile:
+    path: /etc/init.d/jenkins
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: do_stop_cmd_override"
+    block: |
+      do_stop_cmd_override() {
+          check_arguments || return "$?"
+
+          if [ -f "${PIDFILE}" ]; then
+              PID=$(cat "${PIDFILE}")
+
+              # Check if the process is running
+              if kill -0 "${PID}" >/dev/null 2>&1; then
+                  echo "Stopping Jenkins (PID: ${PID})..."
+                  kill "${PID}" >/dev/null 2>&1
+                  sleep 5
+
+                  # Verify if the process has stopped
+                  if kill -0 "${PID}" >/dev/null 2>&1; then
+                      echo "Jenkins did not stop gracefully. Forcing termination."
+                      kill -9 "${PID}" >/dev/null 2>&1
+                  fi
+              else
+                  echo "No running Jenkins process found for PID ${PID}. Removing stale PID file."
+              fi
+
+              # Remove the PID file
+              rm -f "${PIDFILE}"
+          else
+              echo "No PID file found. Jenkins may not be running."
+              # Attempt to stop any process running Jenkins as a fallback
+              PID=$(pgrep -f "${JENKINS_WAR}")
+              if [ -n "${PID}" ]; then
+                  echo "Stopping Jenkins (fallback PID: ${PID})..."
+                  kill "${PID}" >/dev/null 2>&1
+                  sleep 5
+                  if kill -0 "${PID}" >/dev/null 2>&1; then
+                      echo "Jenkins did not stop gracefully. Forcing termination."
+                      kill -9 "${PID}" >/dev/null 2>&1
+                  fi
+              fi
+          fi
+
+          return 0
+      }
+
+# Overwrite the do_start_cmd_override function
+- name: Remove the original do_start_cmd_override function
+  ansible.builtin.replace:
+    path: /etc/init.d/jenkins
+    regexp: |
+      ^do_start_cmd_override\(\) {(\n|.)*?^}
+    replace: ''
+
+- name: Add the updated do_start_cmd_override function
+  ansible.builtin.blockinfile:
+    path: /etc/init.d/jenkins
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: do_start_cmd_override"
+    block: |
+      do_start_cmd_override() {
+          check_arguments || return "$?"
+
+          # load environments
+          if [ -r /etc/default/locale ]; then
+            . /etc/default/locale
+            export LANG LANGUAGE
+          elif [ -r /etc/environment ]; then
+            . /etc/environment
+            export LANG LANGUAGE
+          fi
+          export JENKINS_HOME
+
+          PID=$(pgrep -f "${JENKINS_WAR}")
           if [ -n "${PID}" ]; then
-              echo "Jenkins is running (PID: ${PID})"
+              echo "Jenkins is already running (PID: ${PID})."
+              return 0
+          fi
+
+          # Start Jenkins and capture the PID
+          start-stop-daemon \
+              --start \
+              --quiet \
+              --background \
+              --make-pidfile \
+              --pidfile "${PIDFILE}" \
+              --chdir "${JENKINS_HOME}" \
+              --chuid "${JENKINS_USER}" \
+              --user "${JENKINS_USER}" \
+              --group "${JENKINS_GROUP}" \
+              --name "${COMMAND_NAME}" \
+              --exec "${JAVA}" \
+              -- -jar "${JENKINS_WAR}" ${JENKINS_ARGS} >>"${JENKINS_LOG}" 2>&1
+          sleep 1
+
+          # Verify if Jenkins started successfully
+          PID=$(pgrep -f "${JENKINS_WAR}")
+          if [ -n "${PID}" ]; then
+              echo "${PID}" > "${PIDFILE}"
+              echo "Jenkins started (PID: ${PID})."
               return 0
           else
-              echo "Jenkins is not running"
+              echo "Failed to start Jenkins."
               return 1
           fi
       }

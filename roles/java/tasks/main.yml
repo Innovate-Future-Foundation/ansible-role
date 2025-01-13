@@ -14,7 +14,7 @@
 - name: Check if JDK is installed
   ansible.builtin.command: java -version
   register: java_version
-  ignore_errors: yes
+  failed_when: false
   changed_when: false
 
 - name: Get installed the packages 

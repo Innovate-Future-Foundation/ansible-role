@@ -5,6 +5,19 @@
   ansible.builtin.include_tasks: setup-master.yml
   when: inventory_hostname in groups['master']
 
+- name: Signal completion of master setup
+  ansible.builtin.file:
+    path: /tmp/master-setup-done.flag
+    state: touch
+  when: inventory_hostname in groups['master']
+
+- name: Wait for master configuration to complete
+  ansible.builtin.wait_for:
+    path: /tmp/master-setup-done.flag
+    timeout: 600
+  delegate_to: "{{ groups['master'][0] }}"
+  when: inventory_hostname in groups['worker']
+
 - name: Configure worker node
   ansible.builtin.include_tasks: setup-worker.yml
   when: inventory_hostname in groups['worker']
