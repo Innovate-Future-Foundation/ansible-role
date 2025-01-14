@@ -18,7 +18,7 @@
     name: "{{ jenkins_process_user }}"
     group: "{{ jenkins_process_group }}"
     state: present
-    append: true
+    # append: true
     createhome: true
   become: true
 

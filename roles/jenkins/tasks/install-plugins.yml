@@ -1,4 +1,49 @@
 ---
-- name: Install Jenkins Plugins
-  ansible.builtin.debug:
-    msg: "Install Jenkins Plugins..."
+- name: Get the Plugin Installation Manager Tool jarfile
+  ansible.builtin.get_url:
+    url: "{{ jenkins_plugin_installation_manager_tool_url }}"
+    dest: "{{ jenkins_home }}/jenkins-plugin-manager.jar"
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: 0755
+  register: plugin_manager_jarfile_get
+  until: "'OK' in plugin_manager_jarfile_get.msg or '304' in plugin_manager_jarfile_get.msg or 'file already exists' in plugin_manager_jarfile_get.msg"
+  retries: 5
+  delay: 10
+  check_mode: false
+
+- name: Upload plugin.txt file to master
+  ansible.builtin.copy:
+    src: "plugins.txt"
+    dest: "/tmp/plugins.txt"
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: '0755'
+
+- name: Check if Jenkins plugins folder exists.
+  ansible.builtin.stat:
+    path: "{{ jenkins_home }}/plugins"
+  register: jenkins_plugins_folder_stat
+
+- name: Ensure Jenkins plugins folder exists.
+  ansible.builtin.file:
+    path: "{{ jenkins_home }}/plugins"
+    state: directory
+    mode: 0644
+  when: not jenkins_plugins_folder_stat.stat.exists
+
+- name: Install Jenkins Plugins with Plugin Installation Manager Tool
+  ansible.builtin.command:
+    cmd: >
+      java -jar ./jenkins-plugin-manager.jar
+      --war /usr/share/java/jenkins.war
+      --plugin-download-directory ./plugins
+      --plugin-file /tmp/plugins.txt
+      --plugins delivery-pipeline-plugin:latest deployit-plugin
+  args:
+    chdir: "{{ jenkins_home }}"
+  register: plugin_installation
+  retries: 3
+  delay: 10
+  until: plugin_installation.rc == 0
+  changed_when: plugin_installation.rc == 0

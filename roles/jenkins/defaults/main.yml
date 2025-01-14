@@ -27,6 +27,7 @@ jenkins_plugin_updates_expiration: 86400
 jenkins_plugin_timeout: 30
 jenkins_plugins_install_dependencies: true
 jenkins_updates_url: "https://updates.jenkins.io"
+jenkins_plugin_installation_manager_tool_url: "https://github.com/jenkinsci/plugin-installation-manager-tool/releases/download/2.13.2/jenkins-plugin-manager-2.13.2.jar"
 
 jenkins_admin_username: admin
 jenkins_admin_password: admin
