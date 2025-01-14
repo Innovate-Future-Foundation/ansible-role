@@ -49,7 +49,7 @@
     status_code: 200, 403
     return_content: "yes"
     body_format: raw
-    follow_redirects: "no"
+    follow_redirects: "none"
   register: jenkins_status
   delay: "{{ jenkins_connection_delay }}"
   retries: "{{ jenkins_connection_retries }}"

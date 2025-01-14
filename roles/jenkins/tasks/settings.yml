@@ -1,4 +1,9 @@
 ---
+- name: Count worker nodes
+  ansible.builtin.set_fact:
+    jenkins_worker_nodes_cnt: "{{ groups['worker'] | length | int }}"
+  when: groups['worker'] is defined
+
 - name: Check if jenkins_init_folder exists.
   ansible.builtin.stat:
     path: "{{ jenkins_init_folder }}"
@@ -129,6 +134,14 @@
 
 - name: Install Jenkins Plugins
   ansible.builtin.include_tasks: install-plugins.yml
+
+- name: Scale Jenkins built-in node executors to 0
+  community.general.xml:
+    path: "{{ jenkins_home }}/config.xml"
+    xpath: "/hudson/numExecutors"
+    value: "0"
+    state: present
+  when: jenkins_worker_nodes_cnt | int > 0
 
 - name: Restart Jenkins service
   ansible.builtin.set_fact:

@@ -31,6 +31,36 @@
     mode: u+rwx
     follow: true
 
+# If the output is systemd, then the system is using systemd as the init system. Otherwise without systemd.
+- name: Check if systemd is the active init system
+  ansible.builtin.command: "ps -p 1 -o comm="
+  register: active_init_system
+  changed_when: false
+
+- name: Debug systemd availability
+  ansible.builtin.debug:
+    msg: "Active init system: {{ active_init_system.stdout.strip() }}"
+
+- name: Create init.d jenkins-agent service file
+  ansible.builtin.template:
+    src: jenkins-agent.j2
+    dest: "/etc/init.d/jenkins-agent"
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: 0755
+  register: jenkins_service_config
+  when: active_init_system.stdout.strip() != 'systemd'
+
+- name: Create systemd jenkins-agent service file
+  ansible.builtin.template:
+    src: jenkins-agent.service.j2
+    dest: "/etc/systemd/system/jenkins-agent.service"
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: 0755
+  register: jenkins_service_config
+  when: active_init_system.stdout.strip() == 'systemd'
+
 - name: Get the jenkins-cli jarfile from the Jenkins server
   ansible.builtin.get_url:
     url: "http://{{ jenkins_master_hostname }}:{{ jenkins_http_port }}{{ jenkins_url_prefix }}/jnlpJars/jenkins-cli.jar"
@@ -97,7 +127,7 @@
     path: "{{ jenkins_home }}/{{ inventory_hostname }}.jnlp"
     owner: "{{ jenkins_process_user }}"
     group: "{{ jenkins_process_group }}"
-    mode: 0664
+    mode: 0755
 
 # sample jnlp file:
 # <jnlp><application-desc><argument>0c15e164c95275d826d8179cab9bcf0ef86554e22a69f3dd9abad71d4ecabc76</argument><argument>worker-1-node</argument><argument>-url</argument><argument>http://jenkins-master:8080/</argument></application-desc></jnlp>
@@ -113,7 +143,7 @@
     content: "{{ jenkins_agent_secret.stdout }}"
     owner: "{{ jenkins_process_user }}"
     group: "{{ jenkins_process_group }}"
-    mode: "0664"
+    mode: 0755
 
 - name: Ensure jenkins_home/logs directory exists
   ansible.builtin.file:
@@ -124,14 +154,27 @@
     mode: u+rwx
     follow: true
 
-- name: Set worker node with secret
-  ansible.builtin.shell:
-    cmd: "java -jar {{ jenkins_agent_jar_location }} \
-          -url http://{{ jenkins_master_hostname }}:{{ jenkins_http_port }} \
-          -secret @{{ jenkins_home }}/secret.key \
-          -name {{ inventory_hostname }} \
-          -webSocket > {{ jenkins_home }}/logs/jenkins-agent.log 2>&1 &"
-  args:
-    executable: /bin/bash
-  changed_when: false
-    
+# - name: Set worker node with secret
+#   ansible.builtin.shell:
+#     cmd: "java -jar {{ jenkins_agent_jar_location }} \
+#           -url http://{{ jenkins_master_hostname }}:{{ jenkins_http_port }} \
+#           -secret @{{ jenkins_home }}/secret.key \
+#           -name {{ inventory_hostname }} \
+#           -webSocket > {{ jenkins_home }}/logs/jenkins-agent.log 2>&1 &"
+#   args:
+#     executable: /bin/bash
+#   changed_when: false
+
+- name: Start worker jenkins-agent service via service
+  ansible.builtin.service:
+    name: jenkins-agent
+    state: restarted
+    use: service
+  when: active_init_system.stdout.strip() != 'systemd'    
+
+- name: Start worker jenkins-agent service via systemctl
+  ansible.builtin.systemd_service:
+    name: jenkins-agent
+    state: restarted
+    enabled: true
+  when: active_init_system.stdout.strip() == 'systemd'

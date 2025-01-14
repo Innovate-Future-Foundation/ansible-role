@@ -15,3 +15,5 @@ base_packages:
     version: 1.7.1-3build1
   - name: lsb-base
     version: 11.6
+  - name: python3-lxml
+    version: 5.2.1-1
