@@ -1,0 +1,12 @@
+- name: Configure Jenkins
+  hosts: all
+  become: yes
+  vars:
+    jdk_version: openjdk-21
+  roles:
+    - role: base
+    - role: java
+    - role: jenkins
+  # handlers:
+  #   - name: Register handlers
+  #     ansible.builtin.include_tasks: roles/jenkins/handlers/main.yml

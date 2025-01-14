@@ -1,18 +1,136 @@
 ---
-- name: Check if Jenkins initial admin password file exists
+- name: Check if jenkins_init_folder exists.
   ansible.builtin.stat:
-    path: /var/lib/jenkins/secrets/initialAdminPassword
-  register: jenkins_password_file
-  changed_when: false
-  retries: 3
-  delay: 5
-  until: jenkins_password_file.stat.exists
+    path: "{{ jenkins_init_folder }}"
+  register: jenkins_init_folder_stat
 
-- name: Output Jenkins initial admin password
-  ansible.builtin.command: cat /var/lib/jenkins/secrets/initialAdminPassword
-  register: jenkins_admin_password
-  changed_when: false
+- name: Ensure jenkins_init_folder exists.
+  ansible.builtin.file:
+    path: "{{ jenkins_init_folder }}"
+    state: directory
+    mode: 0644
+  when: not jenkins_init_folder_stat.stat.exists
 
-- name: Debug Jenkins initial admin password
-  ansible.builtin.debug:
-    msg: "Jenkins initial admin password: {{ jenkins_admin_password.stdout }}"
+- name: Check if jenkins_init_file exists.
+  ansible.builtin.stat:
+    path: "{{ jenkins_init_file }}"
+  register: jenkins_init_file_stat
+
+- name: Ensure jenkins_init_file exists.
+  ansible.builtin.file:
+    path: "{{ jenkins_init_file }}"
+    state: touch
+    mode: 0644
+  when: not jenkins_init_file_stat.stat.exists
+
+- name: Populate jenkins_init_file with service tag.
+  ansible.builtin.copy:
+    dest: "{{ jenkins_init_file }}"
+    content: "[Service]"
+    mode: 0644
+  when: not jenkins_init_file_stat.stat.exists
+
+- name: Modify variables in init file.
+  ansible.builtin.lineinfile:
+    dest: "{{ jenkins_init_file }}"
+    insertafter: '^Environment="{{ item.option }}='
+    regexp: '^Environment="{{ item.option }} '
+    line: 'Environment="{{ item.option }}={{ item.value }}"'
+    state: present
+    mode: 0644
+  with_items: "{{ jenkins_init_changes }}"
+  register: jenkins_config
+  notify: Restart Jenkins if config changes
+
+- name: Ensure jenkins_home directory exists.
+  ansible.builtin.file:
+    path: "{{ jenkins_home }}"
+    state: directory
+    owner: jenkins
+    group: jenkins
+    mode: u+rwx
+    follow: true
+
+- name: Create custom init scripts directory.
+  ansible.builtin.file:
+    path: "{{ jenkins_home }}/init.groovy.d"
+    state: directory
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: 0775
+
+- name: Configure proxy config for Jenkins
+  ansible.builtin.template:
+    src: proxy.xml
+    dest: "{{ jenkins_home }}/proxy.xml"
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: 0664
+  register: jenkins_proxy_config
+  when:
+    - jenkins_proxy_host | length > 0
+    - jenkins_proxy_port | length > 0
+
+- name: Copy Jenkins init Groovy scripts
+  ansible.builtin.template:
+    src: init.groovy.j2
+    dest: "{{ jenkins_home }}/init.groovy.d/init.groovy"
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: 0775
+  register: jenkins_users_config
+
+- name: Copy Jenkins extra logs init Groovy scripts
+  ansible.builtin.template:
+    src: extra-logging.groovy.j2
+    dest: "{{ jenkins_home }}/init.groovy.d/extra-logging.groovy"
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: 0775
+  register: jenkins_extra_logs_config
+
+- name: Start Jenkins service
+  ansible.builtin.set_fact:
+    jenkins_restart_behavior: "service"
+  notify: Restart Jenkins service
+  changed_when: true
+
+- name: Flush handlers immediately
+  ansible.builtin.meta: flush_handlers
+
+# - name: Immediately restart Jenkins on http or user changes.
+#   ansible.builtin.set_fact:
+#     jenkins_restart_behavior: "service"
+#   notify: Restart Jenkins service
+#   when: >
+#     (jenkins_users_config is defined and jenkins_users_config.changed)
+#     or (jenkins_http_config is defined and jenkins_http_config.changed)
+#     or (jenkins_home_config is defined and jenkins_home_config.changed)
+#     or (jenkins_proxy_config is defined and jenkins_proxy_config.changed)
+#   tags: ['skip_ansible_lint']
+
+# - name: Remove Jenkins security init scripts after first startup.
+#   ansible.builtin.file:
+#     path: "{{ jenkins_home }}/init.groovy.d/init.groovy"
+#     state: absent
+
+# - name: Check if Jenkins initial admin password file exists
+#   ansible.builtin.stat:
+#     path: /var/lib/jenkins/secrets/initialAdminPassword
+#   register: jenkins_password_file
+#   changed_when: false
+#   retries: 3
+#   delay: 5
+#   until: jenkins_password_file.stat.exists
+
+# - name: Output Jenkins initial admin password
+#   ansible.builtin.command: cat /var/lib/jenkins/secrets/initialAdminPassword
+#   register: jenkins_admin_password
+#   changed_when: false
+
+# - name: Debug Jenkins initial admin password
+#   ansible.builtin.debug:
+#     msg: "Jenkins initial admin password: {{ jenkins_admin_password.stdout }}"
+
+# - name: Install Jenkins Plugins
+#   ansible.builtin.include_tasks: install-plugins.yml

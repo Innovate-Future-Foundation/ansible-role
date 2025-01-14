@@ -1,11 +1,10 @@
 ---
-- name: Provision Jenkins
-  hosts: jenkins_servers
+- name: Installed JDK
+  hosts: test
   become: yes
+  vars:
+    jdk_version: openjdk-21
   roles:
-    - role: ansible-role-jenkins
-      vars:
-        jenkins_plugins:
-          - git
-          - pipeline
-        ssl_domain: your.domain.com
+    - role: base
+    - role: java
+    - role: jenkins

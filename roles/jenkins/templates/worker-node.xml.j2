@@ -1,0 +1,11 @@
+<slave>
+  <name>{{ inventory_hostname }}</name>
+  <description>Worker Node</description>
+  <remoteFS>{{ jenkins_home }}</remoteFS>
+  <numExecutors>2</numExecutors>
+  <mode>EXCLUSIVE</mode>
+  <retentionStrategy class="hudson.slaves.RetentionStrategy$Always"/>
+  <launcher class="hudson.slaves.JNLPLauncher"/>
+  <label>worker</label>
+  <nodeProperties/>
+</slave>

@@ -3,6 +3,7 @@
   ansible.builtin.service:
     name: jenkins
     state: restarted
+    use: service
   when: jenkins_restart_behavior == 'service'
 
 - name: Safe-restart Jenkins via CLI
@@ -11,5 +12,6 @@
     -auth {{ jenkins_admin_username }}:{{ jenkins_admin_password }}
     -s http://{{ jenkins_hostname }}:{{ jenkins_http_port }} safe-restart
   register: jenkins_safe_restart_result
-  changed_when: "'Restart is already running' not in jenkins_restart_result.stdout and jenkins_restart_result.rc == 0"
+  # changed_when: "'Restart is already running' not in jenkins_restart_result.stdout and jenkins_restart_result.rc == 0"
   when: jenkins_restart_behavior == 'safe-restart'
+  changed_when: false

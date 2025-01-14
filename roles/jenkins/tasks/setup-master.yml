@@ -1,0 +1,61 @@
+---
+- name: Include OS-Specific variables
+  ansible.builtin.include_vars: "{{ ansible_os_family }}.yml"
+
+- name: Define jenkins_local_gpg_key
+  ansible.builtin.set_fact:
+    jenkins_local_gpg_key: "{{ __jenkins_local_gpg_key }}"
+  when: jenkins_local_gpg_key is not defined
+
+- name: Define jenkins_repo_url
+  ansible.builtin.set_fact:
+    jenkins_repo_url: "{{ __jenkins_repo_url }}"
+  when: jenkins_repo_url is not defined
+
+- name: Define jenkins_repo_key_url
+  ansible.builtin.set_fact:
+    jenkins_repo_key_url: "{{ __jenkins_repo_key_url }}"
+  when: jenkins_repo_key_url is not defined
+
+- name: Define jenkins_pkg_url
+  ansible.builtin.set_fact:
+    jenkins_pkg_url: "{{ __jenkins_pkg_url }}"
+  when: jenkins_pkg_url is not defined
+
+- name: Include OS-Specific tasks
+  ansible.builtin.include_tasks: setup-Debian.yml
+  when: ansible_os_family == 'Debian'
+
+- name: Configure Jenkins settings
+  ansible.builtin.include_tasks: settings.yml
+
+# - name: Restart Jenkins service
+#   ansible.builtin.set_fact:
+#     jenkins_restart_behavior: "service"
+#   notify: Restart Jenkins service
+#   changed_when: true
+
+# - name: Flush handlers immediately
+#   ansible.builtin.meta: flush_handlers
+
+- name: Wait for Jenkins to start up
+  ansible.builtin.uri:
+    url: "http://{{ jenkins_hostname }}:{{ jenkins_http_port }}{{ jenkins_url_prefix }}/cli/"
+    method: GET
+    status_code: 200, 403
+    return_content: "yes"
+    body_format: raw
+    follow_redirects: "no"
+  register: jenkins_status
+  delay: "{{ jenkins_connection_delay }}"
+  retries: "{{ jenkins_connection_retries }}"
+  until: (jenkins_status.status == 200 or jenkins_status.status == 403) and jenkins_status.content.find("Please wait while Jenkins is getting ready to work") == -1
+  changed_when: true
+  check_mode: false
+  notify: Configure worker nodes
+
+- name: Configure Jenkins cli on worker nodes
+  ansible.builtin.debug:
+    msg: "Start Jenkins cli on worker nodes..."
+  notify: Configure worker nodes
+  changed_when: true

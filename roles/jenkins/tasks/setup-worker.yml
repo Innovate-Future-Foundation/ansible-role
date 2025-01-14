@@ -1,0 +1,137 @@
+---
+- name: Execute configure worker node
+  ansible.builtin.debug:
+    msg: "Configure worker node..."
+
+- name: Get the master host's hostname
+  ansible.builtin.set_fact:
+    jenkins_master_hostname: "{{ hostvars[groups['master'][0]].ansible_host_alias }}"
+
+- name: Create a group for jenkins user
+  ansible.builtin.group:
+    name: "{{ jenkins_process_group }}"
+    state: present
+  become: true
+
+- name: Create jenkins user
+  ansible.builtin.user:
+    name: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    state: present
+    append: true
+    createhome: true
+  become: true
+
+- name: Ensure jenkins_home directory exists
+  ansible.builtin.file:
+    path: "{{ jenkins_home }}"
+    state: directory
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: u+rwx
+    follow: true
+
+- name: Get the jenkins-cli jarfile from the Jenkins server
+  ansible.builtin.get_url:
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_http_port }}{{ jenkins_url_prefix }}/jnlpJars/jenkins-cli.jar"
+    dest: "{{ jenkins_cli_jar_location }}"
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: 0755
+  register: cli_jarfile_get
+  until: "'OK' in cli_jarfile_get.msg or '304' in cli_jarfile_get.msg or 'file already exists' in cli_jarfile_get.msg"
+  retries: 5
+  delay: 10
+  check_mode: false
+
+- name: Get the agent jarfile from the Jenkins server
+  ansible.builtin.get_url:
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_http_port }}{{ jenkins_url_prefix }}/jnlpJars/agent.jar"
+    dest: "{{ jenkins_agent_jar_location }}"
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: 0755
+  register: agent_jarfile_get
+  until: "'OK' in agent_jarfile_get.msg or '304' in agent_jarfile_get.msg or 'file already exists' in agent_jarfile_get.msg"
+  retries: 5
+  delay: 10
+  check_mode: false
+
+- name: Create Jenkins worker node
+  ansible.builtin.command:
+    cmd: "java -jar {{ jenkins_cli_jar_location }} \
+          -auth {{ jenkins_admin_username }}:{{ jenkins_admin_password }} \
+          -s http://{{ jenkins_master_hostname }}:{{ jenkins_http_port }} \
+          -webSocket \
+          create-node {{ inventory_hostname }}"
+    stdin: "{{ lookup('template', 'worker-node.xml.j2') }}"
+  register: jenkins_create_node_result
+  retries: 5
+  delay: 10
+  until: jenkins_create_node_result.rc == 0
+  changed_when: false
+
+- name: Retrieve worker node connection secret
+  ansible.builtin.uri:
+    url: "http://{{ jenkins_master_hostname }}:{{ jenkins_http_port }}{{ jenkins_url_prefix }}/computer/{{ inventory_hostname }}/jenkins-agent.jnlp"
+    user: "{{ jenkins_admin_username }}"
+    password: "{{ jenkins_admin_password }}"
+    force_basic_auth: yes
+    method: GET
+    return_content: yes
+  register: jenkins_agent_jnlp_response
+  retries: 5
+  delay: 10
+  until: jenkins_agent_jnlp_response.status == 200
+
+- name: Write JNLP file to worker node
+  ansible.builtin.copy:
+    dest: "{{ jenkins_home }}/{{ inventory_hostname }}.jnlp"
+    content: "{{ jenkins_agent_jnlp_response.content }}"
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: '0644'
+
+- name: Configure jnlp file permissions
+  ansible.builtin.file:
+    path: "{{ jenkins_home }}/{{ inventory_hostname }}.jnlp"
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: 0664
+
+# sample jnlp file:
+# <jnlp><application-desc><argument>0c15e164c95275d826d8179cab9bcf0ef86554e22a69f3dd9abad71d4ecabc76</argument><argument>worker-1-node</argument><argument>-url</argument><argument>http://jenkins-master:8080/</argument></application-desc></jnlp>
+# sample secret: 0c15e164c95275d826d8179cab9bcf0ef86554e22a69f3dd9abad71d4ecabc76
+- name: Extract worker node secret
+  ansible.builtin.shell: "grep -oP '(?<=<argument>)[a-f0-9]+(?=</argument>)' {{ jenkins_home }}/{{ inventory_hostname }}.jnlp"
+  register: jenkins_agent_secret
+  changed_when: false
+
+- name: Create and populate secret file for worker node
+  ansible.builtin.copy:
+    dest: "{{ jenkins_home }}/secret.key"
+    content: "{{ jenkins_agent_secret.stdout }}"
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: "0664"
+
+- name: Ensure jenkins_home/logs directory exists
+  ansible.builtin.file:
+    path: "{{ jenkins_home }}/logs"
+    state: directory
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: u+rwx
+    follow: true
+
+- name: Set worker node with secret
+  ansible.builtin.shell:
+    cmd: "java -jar {{ jenkins_agent_jar_location }} \
+          -url http://{{ jenkins_master_hostname }}:{{ jenkins_http_port }} \
+          -secret @{{ jenkins_home }}/secret.key \
+          -name {{ inventory_hostname }} \
+          -webSocket > {{ jenkins_home }}/logs/jenkins-agent.log 2>&1 &"
+  args:
+    executable: /bin/bash
+  changed_when: false
+    
