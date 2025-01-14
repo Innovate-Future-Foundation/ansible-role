@@ -72,7 +72,7 @@
     - jenkins_proxy_port | length > 0
 
 - name: Copy Jenkins init Groovy scripts
-  template:
+  ansible.builtin.template:
     src: init.groovy.j2
     dest: "{{ jenkins_home }}/init.groovy.d/init.groovy"
     owner: "{{ jenkins_process_user }}"
@@ -81,7 +81,7 @@
   register: jenkins_users_config
 
 - name: Copy Jenkins extra logs init Groovy scripts
-  template:
+  ansible.builtin.template:
     src: extra-logging.groovy.j2
     dest: "{{ jenkins_home }}/init.groovy.d/extra-logging.groovy"
     owner: "{{ jenkins_process_user }}"
@@ -114,23 +114,23 @@
 #     path: "{{ jenkins_home }}/init.groovy.d/init.groovy"
 #     state: absent
 
-- name: Check if Jenkins initial admin password file exists
-  ansible.builtin.stat:
-    path: /var/lib/jenkins/secrets/initialAdminPassword
-  register: jenkins_password_file
-  changed_when: false
-  retries: 3
-  delay: 5
-  until: jenkins_password_file.stat.exists
+# - name: Check if Jenkins initial admin password file exists
+#   ansible.builtin.stat:
+#     path: /var/lib/jenkins/secrets/initialAdminPassword
+#   register: jenkins_password_file
+#   changed_when: false
+#   retries: 3
+#   delay: 5
+#   until: jenkins_password_file.stat.exists
 
-- name: Output Jenkins initial admin password
-  ansible.builtin.command: cat /var/lib/jenkins/secrets/initialAdminPassword
-  register: jenkins_admin_password
-  changed_when: false
+# - name: Output Jenkins initial admin password
+#   ansible.builtin.command: cat /var/lib/jenkins/secrets/initialAdminPassword
+#   register: jenkins_admin_password
+#   changed_when: false
 
-- name: Debug Jenkins initial admin password
-  ansible.builtin.debug:
-    msg: "Jenkins initial admin password: {{ jenkins_admin_password.stdout }}"
+# - name: Debug Jenkins initial admin password
+#   ansible.builtin.debug:
+#     msg: "Jenkins initial admin password: {{ jenkins_admin_password.stdout }}"
 
-- name: Install Jenkins Plugins
-  ansible.builtin.include_tasks: install-plugins.yml
+# - name: Install Jenkins Plugins
+#   ansible.builtin.include_tasks: install-plugins.yml

@@ -14,3 +14,4 @@
   register: jenkins_safe_restart_result
   # changed_when: "'Restart is already running' not in jenkins_restart_result.stdout and jenkins_restart_result.rc == 0"
   when: jenkins_restart_behavior == 'safe-restart'
+  changed_when: false
