@@ -143,6 +143,9 @@
     state: present
   when: jenkins_worker_nodes_cnt | int > 0
 
+- name: Set Jenkins jobs
+  ansible.builtin.include_tasks: setup-jobs.yml
+
 - name: Restart Jenkins service
   ansible.builtin.set_fact:
     jenkins_restart_behavior: "safe-restart"

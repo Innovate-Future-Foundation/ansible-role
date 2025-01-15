@@ -1,0 +1,68 @@
+- name: Retrieve Jenkins job templates
+  ansible.builtin.find:
+    paths: "{{ role_path }}/templates/jobs/"
+    patterns: "*.xml.j2"
+    file_type: file
+  register: job_templates
+  delegate_to: localhost
+  run_once: true
+
+- name: Extract Jenkins job names without extensions
+  ansible.builtin.set_fact:
+    jenkins_jobs: "{{ job_templates.files | map(attribute='path') | map('basename') | map('regex_replace', '\\.xml\\.j2$', '') | list }}"
+
+- name: Create Jenkins job folders
+  ansible.builtin.file:
+    path: "{{ jenkins_home }}/jobs/{{ item }}"
+    state: directory
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: 0755
+  with_items: "{{ jenkins_jobs }}"
+
+- name: Config Jenkins jobs
+  ansible.builtin.template:
+    src: "jobs/{{ item }}.xml.j2"
+    dest: "{{ jenkins_home }}/jobs/{{ item }}/config.xml"
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: 0644
+  with_items: "{{ jenkins_jobs }}"
+
+- name: Retrieve Jenkins view templates
+  ansible.builtin.find:
+    paths: "{{ role_path }}/templates/views/"
+    patterns: "*.xml.j2"
+    file_type: file
+  register: view_templates
+  delegate_to: localhost
+  run_once: true
+
+- name: Debug view config
+  ansible.builtin.debug:
+    var: view_templates.files | map(attribute='path') | list
+
+- name: Render Jinja templates and prepare view configurations
+  ansible.builtin.set_fact:
+    jenkins_view_configs: []
+
+- name: Render each view template and append to configs
+  ansible.builtin.set_fact:
+    jenkins_view_configs: "{{ jenkins_view_configs + [lookup('template', item.path)] }}"
+  with_items: "{{ view_templates.files }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Debug rendered view configurations
+  ansible.builtin.debug:
+    var: jenkins_view_configs
+
+- name: Insert view config to config.xml
+  community.general.xml:
+    path: "{{ jenkins_home }}/config.xml"
+    xpath: "/hudson/views"
+    input_type: xml
+    add_children:
+      - "{{ item }}"
+  with_items: "{{ jenkins_view_configs }}"
+  when: jenkins_view_configs | length > 0
