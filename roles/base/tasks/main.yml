@@ -9,7 +9,7 @@
 
 - name: Ensure base set of packages are installed
   ansible.builtin.apt:
-    name: "{{ item.name }}={{ item.version }}"
+    name: "{{ item.name }}"
     state: present
   loop: "{{ base_packages }}"
 
