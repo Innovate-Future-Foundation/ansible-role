@@ -1,6 +1,7 @@
 services:
   master:
     container_name: jenkins-master
+    image: ubuntu-with-ssh
     build:
       context: .
       dockerfile: Dockerfile
@@ -14,9 +15,7 @@ services:
 
   worker1:
     container_name: jenkins-worker1
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ubuntu-with-ssh
     tty: true
     ports:
       - "24:22"

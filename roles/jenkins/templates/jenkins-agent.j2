@@ -1,0 +1,97 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:          jenkins-agent
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Jenkins Agent Service
+# Description:       Manage the Jenkins Agent process
+### END INIT INFO
+
+# Configuration
+NAME="jenkins-agent"
+AGENT_HOME="{{ jenkins_home }}"
+AGENT_JAR="{{ jenkins_agent_jar_location }}"
+JENKINS_URL="http://{{ jenkins_master_hostname }}:{{ jenkins_http_port }}"
+SECRET_KEY_FILE="${AGENT_HOME}/secret.key"
+LOG_FILE="${AGENT_HOME}/logs/jenkins-agent.log"
+PID_FILE="${AGENT_HOME}/jenkins-agent.pid"
+JAVA_CMD="/usr/bin/java"
+
+# Check if required files exist
+if [ ! -f "$AGENT_JAR" ]; then
+    echo "Error: Agent JAR not found at $AGENT_JAR"
+    exit 1
+fi
+
+if [ ! -f "$SECRET_KEY_FILE" ]; then
+    echo "Error: Secret key file not found at $SECRET_KEY_FILE"
+    exit 1
+fi
+
+# Function to start the Jenkins Agent
+start() {
+    if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+        echo "$NAME is already running (PID: $(cat "$PID_FILE"))"
+    else
+        echo "Starting $NAME..."
+        nohup $JAVA_CMD -jar "$AGENT_JAR" \
+            -url "$JENKINS_URL" \
+            -secret "@$SECRET_KEY_FILE" \
+            -name "{{ inventory_hostname }}" \
+            -webSocket > "$LOG_FILE" 2>&1 &
+        echo $! > "$PID_FILE"
+        echo "$NAME started with PID: $(cat "$PID_FILE")"
+    fi
+}
+
+# Function to stop the Jenkins Agent
+stop() {
+    if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+        echo "Stopping $NAME..."
+        kill "$(cat "$PID_FILE")"
+        rm -f "$PID_FILE"
+        echo "$NAME stopped."
+    else
+        echo "$NAME is not running."
+    fi
+}
+
+# Function to check the status of the Jenkins Agent
+status() {
+    if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+        echo "$NAME is running (PID: $(cat "$PID_FILE"))"
+    else
+        echo "$NAME is not running."
+    fi
+}
+
+# Function to restart the Jenkins Agent
+restart() {
+    stop
+    sleep 2
+    start
+}
+
+# Main script logic
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        restart
+        ;;
+    status)
+        status
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+
+exit 0

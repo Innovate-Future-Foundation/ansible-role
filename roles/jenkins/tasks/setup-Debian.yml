@@ -35,7 +35,7 @@
     msg: "Active init system: {{ active_init_system.stdout.strip() }}"
 
 - name: Overwrite systemd jenkins service file
-  ansible.builtin.include_tasks: overwrite-systemd-service.yml
+  ansible.builtin.include_tasks: overwrite-master-systemd-service.yml
   when: active_init_system.stdout.strip() != 'systemd'
 
 # - name: Start Jenkins service

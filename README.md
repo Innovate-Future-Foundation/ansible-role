@@ -1,4 +1,4 @@
-Jenkins Server Setup
+Jenkins CI/CD Server Setup
 =========
 
 This Ansible Role automates the setup and configuration of a Jenkins server on an Ubuntu machine. It installs and configures various components required for a fully operational CI/CD environment.
@@ -106,6 +106,7 @@ The followings are the planned roles needed for this project:
 - [x] **`jenkins`**: Installs Jenkins service. Configure Jenkins. Install Jenkins plugins.
 - [ ] **`certibot`**: Installs certibot, configure self-signed certificate.
 - [ ] **`nginx`**: Installs Nginx service, configure Nginx to expose secure HTTPS port, proxy for backend Jenkins service.
+- [ ] **`docker-cli`**: Installs docker-cli to build docker images.
 - [ ] **`nodejs`**: Installs Node.js for frontend code build environment.
 - [ ] **`dotnet`**: Installs DotNet for backend code build environment.
 - [ ] **`dotnet-ef`**: Installs DotNet Entity Framework tool for database migration.

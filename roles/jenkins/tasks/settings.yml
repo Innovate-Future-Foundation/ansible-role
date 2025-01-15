@@ -1,4 +1,9 @@
 ---
+- name: Count worker nodes
+  ansible.builtin.set_fact:
+    jenkins_worker_nodes_cnt: "{{ groups['worker'] | length | int }}"
+  when: groups['worker'] is defined
+
 - name: Check if jenkins_init_folder exists.
   ansible.builtin.stat:
     path: "{{ jenkins_init_folder }}"
@@ -98,6 +103,55 @@
 - name: Flush handlers immediately
   ansible.builtin.meta: flush_handlers
 
+- name: Wait for Jenkins to start up
+  ansible.builtin.uri:
+    url: "http://{{ jenkins_master_host }}:{{ jenkins_http_port }}{{ jenkins_url_prefix }}/cli/"
+    method: GET
+    status_code: 200, 403
+    return_content: "yes"
+    body_format: raw
+    follow_redirects: "none"
+  register: jenkins_status
+  delay: "{{ jenkins_connection_delay }}"
+  retries: "{{ jenkins_connection_retries }}"
+  until: (jenkins_status.status == 200 or jenkins_status.status == 403) and jenkins_status.content.find("Please wait while Jenkins is getting ready to work") == -1
+  changed_when: true
+  check_mode: false
+  notify: Configure worker nodes
+
+- name: Get the jenkins-cli jarfile from the Jenkins server
+  ansible.builtin.get_url:
+    url: "http://{{ jenkins_master_host }}:{{ jenkins_http_port }}{{ jenkins_url_prefix }}/jnlpJars/jenkins-cli.jar"
+    dest: "{{ jenkins_cli_jar_location }}"
+    owner: "{{ jenkins_process_user }}"
+    group: "{{ jenkins_process_group }}"
+    mode: 0755
+  register: cli_jarfile_get
+  until: "'OK' in cli_jarfile_get.msg or '304' in cli_jarfile_get.msg or 'file already exists' in cli_jarfile_get.msg"
+  retries: 5
+  delay: 10
+  check_mode: false
+
+- name: Install Jenkins Plugins
+  ansible.builtin.include_tasks: install-plugins.yml
+
+- name: Scale Jenkins built-in node executors to 0
+  community.general.xml:
+    path: "{{ jenkins_home }}/config.xml"
+    xpath: "/hudson/numExecutors"
+    value: "0"
+    state: present
+  when: jenkins_worker_nodes_cnt | int > 0
+
+- name: Restart Jenkins service
+  ansible.builtin.set_fact:
+    jenkins_restart_behavior: "safe-restart"
+  notify: Restart Jenkins service
+  changed_when: true
+
+- name: Flush handlers immediately
+  ansible.builtin.meta: flush_handlers
+
 # - name: Immediately restart Jenkins on http or user changes.
 #   ansible.builtin.set_fact:
 #     jenkins_restart_behavior: "service"
@@ -108,11 +162,6 @@
 #     or (jenkins_home_config is defined and jenkins_home_config.changed)
 #     or (jenkins_proxy_config is defined and jenkins_proxy_config.changed)
 #   tags: ['skip_ansible_lint']
-
-# - name: Remove Jenkins security init scripts after first startup.
-#   ansible.builtin.file:
-#     path: "{{ jenkins_home }}/init.groovy.d/init.groovy"
-#     state: absent
 
 # - name: Check if Jenkins initial admin password file exists
 #   ansible.builtin.stat:
@@ -131,6 +180,3 @@
 # - name: Debug Jenkins initial admin password
 #   ansible.builtin.debug:
 #     msg: "Jenkins initial admin password: {{ jenkins_admin_password.stdout }}"
-
-# - name: Install Jenkins Plugins
-#   ansible.builtin.include_tasks: install-plugins.yml

@@ -6,7 +6,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Update the package list, install necessary packages, and configure SSH
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends tzdata openssh-server python3 python3-pip
+    apt-get install -y --no-install-recommends tzdata openssh-server python3 python3-pip && \
+    apt-get clean 
 
 RUN mkdir -p /root/.ssh /var/run/sshd && \
     chmod 700 /root/.ssh && \
