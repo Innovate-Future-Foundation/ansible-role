@@ -1,7 +1,7 @@
 #SPDX-License-Identifier: MIT-0
 ---
 - name: Base role test
-  hosts: localhost
+  hosts: all
   become: yes
   roles:
     - base

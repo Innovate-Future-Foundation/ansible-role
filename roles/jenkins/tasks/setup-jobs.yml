@@ -38,9 +38,9 @@
   delegate_to: localhost
   run_once: true
 
-- name: Debug view config
-  ansible.builtin.debug:
-    var: view_templates.files | map(attribute='path') | list
+# - name: Debug view config
+#   ansible.builtin.debug:
+#     var: view_templates.files | map(attribute='path') | list
 
 - name: Render Jinja templates and prepare view configurations
   ansible.builtin.set_fact:
@@ -53,9 +53,9 @@
   delegate_to: localhost
   run_once: true
 
-- name: Debug rendered view configurations
-  ansible.builtin.debug:
-    var: jenkins_view_configs
+# - name: Debug rendered view configurations
+#   ansible.builtin.debug:
+#     var: jenkins_view_configs
 
 - name: Insert view config to config.xml
   community.general.xml:
