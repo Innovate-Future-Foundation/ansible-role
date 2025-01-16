@@ -1,7 +1,7 @@
 #SPDX-License-Identifier: MIT-0
 ---
 - name: Base role test
-  hosts: localhost
+  hosts: all
   become: yes
   roles:
     - base
@@ -24,7 +24,7 @@
     - name: Display APT upgrade simulation result
       ansible.builtin.debug:
         var: apt_upgrade_simulation.stdout_lines
-    
+
     - name: Collect package facts
       ansible.builtin.package_facts:
         manager: apt
@@ -37,7 +37,7 @@
         msg: >
           "Package {{ item.name }} does not match expected version {{ item.version }}!"
       with_items: "{{ base_packages }}"
-        
+
     # - name: Verify installed base packages with specific versions
     #   ansible.builtin.shell:
     #     cmd: >

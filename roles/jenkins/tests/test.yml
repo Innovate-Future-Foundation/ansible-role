@@ -1,7 +1,7 @@
 #SPDX-License-Identifier: MIT-0
 ---
 - name: Jenkins role test
-  hosts: localhost
+  hosts: all
   remote_user: root
   roles:
     - base
@@ -28,48 +28,10 @@
       ansible.builtin.package_facts:
         manager: apt
 
-    - name: Verify installed Jenkins package
-      ansible.builtin.assert:
-        that:
-          - "'jenkins' in ansible_facts.packages"
-        msg: >
-          "Jenkins package is not installed!"
+    - name: Test master configuration
+      ansible.builtin.include_tasks: test-master.yml
+      when: inventory_hostname in groups['master']
 
-    - name: Check if Jenkins PID file exists
-      ansible.builtin.stat:
-        path: /var/run/jenkins/jenkins.pid
-      register: jenkins_pid_file
-      changed_when: false
-
-    - name: Verify Jenkins process is running
-      ansible.builtin.command: ps aux
-      register: jenkins_ps_output
-      changed_when: false
-
-    - name: Ensure Jenkins is running
-      ansible.builtin.debug:
-        msg: >
-          Jenkins PID file exists: {{ jenkins_pid_file.stat.exists }},
-          Jenkins process is running: {{ '/usr/share/java/jenkins.war' in jenkins_ps_output.stdout }}
-      failed_when: 
-        - not jenkins_pid_file.stat.exists
-        - not jenkins_ps_output.stdout"
-
-    - name: Verify Jenkins service is listening on port 8080
-      ansible.builtin.wait_for:
-        port: 8080
-        state: started
-        delay: 3
-        timeout: 60
-
-    - name: Verify Jenkins initial admin password file exists
-      ansible.builtin.stat:
-        path: /var/lib/jenkins/secrets/initialAdminPassword
-      register: jenkins_admin_password_file
-
-    - name: Verify Jenkins initial admin password file is not empty
-      ansible.builtin.assert:
-        that:
-          - jenkins_admin_password_file.stat.size > 0
-        msg: >
-          "Jenkins initial admin password file is empty!"
+    - name: Test worker configuration
+      ansible.builtin.include_tasks: test-worker.yml
+      when: inventory_hostname in groups['worker']

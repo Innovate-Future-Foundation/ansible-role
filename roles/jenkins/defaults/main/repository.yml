@@ -1,0 +1,15 @@
+jenkins_job_frontend_repository: https://github.com/Innovate-Future-Foundation/Frontend.git
+jenkins_job_frontend_branch_dev: "*/dev"
+jenkins_job_frontend_pipeline_path_dev: Jenkinsfile
+jenkins_job_frontend_branch_uat: "*/uat"
+jenkins_job_frontend_pipeline_path_uat: Jenkinsfile
+jenkins_job_frontend_branch_prod: "*/main"
+jenkins_job_frontend_pipeline_path_prod: Jenkinsfile
+
+jenkins_job_backend_repository: https://github.com/Innovate-Future-Foundation/Server.git
+jenkins_job_backend_branch_dev: "*/dev"
+jenkins_job_backend_pipeline_path_dev: Jenkinsfile
+jenkins_job_backend_branch_uat: "*/uat"
+jenkins_job_backend_pipeline_path_uat: Jenkinsfile
+jenkins_job_backend_branch_prod: "*/prod"
+jenkins_job_backend_pipeline_path_prod: Jenkinsfile
