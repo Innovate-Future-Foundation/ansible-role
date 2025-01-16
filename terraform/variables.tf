@@ -13,3 +13,25 @@ variable "key_name" {
 variable "ssh_private_key" {
   description = "The path to the SSH private key file"
 }
+variable "master_node" {
+  default = {
+    name            = "master-node"
+    alias           = "jenkins-master"
+    ansible_host    = "localhost"
+    ansible_user    = "root"
+    ansible_port    = 23
+    private_key     = "~/.ssh/id_rsa"
+  }
+}
+variable "worker_nodes" {
+  default = [
+    {
+      name            = "worker-1-node"
+      alias           = "jenkins-worker1"
+      ansible_host    = "localhost"
+      ansible_user    = "root"
+      ansible_port    = 24
+      private_key     = "~/.ssh/id_rsa"
+    }
+  ]
+}

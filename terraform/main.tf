@@ -74,17 +74,45 @@ resource "aws_security_group_rule" "slave_allow_ssh_from_master" {
     security_group_id        = aws_security_group.inff-jenkins-slave-sg.id
     source_security_group_id = aws_security_group.inff-jenkins-master-sg.id
 }
+# resource "local_file" "inventory" {
+#   content = <<EOT
+# [test]
+# ${aws_instance.jenkins_master.public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=${var.ssh_private_key} ansible_ssh_extra_args='-o StrictHostKeyChecking=no'
+#   EOT
+#   filename = "${path.module}/inventory.ini"
+# }
 resource "local_file" "inventory" {
   content = <<EOT
-[test]
-${aws_instance.jenkins_master.public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=${var.ssh_private_key} ansible_ssh_extra_args='-o StrictHostKeyChecking=no'
-  EOT
-  filename = "${path.module}/inventory.ini"
+all:
+  children:
+    master:
+      hosts:
+        ${var.master_node.name}:
+          ansible_host: ${var.master_node.ansible_host}
+          ansible_host_alias: ${var.master_node.alias}
+          ansible_user: ${var.master_node.ansible_user}
+          ansible_port: ${var.master_node.ansible_port}
+          ansible_ssh_private_key_file: ${var.master_node.private_key}
+          ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+    worker:
+      hosts:
+%{ for worker in var.worker_nodes ~}
+        ${worker.name}:
+          ansible_host: ${worker.ansible_host}
+          ansible_host_alias: ${worker.alias}
+          ansible_user: ${worker.ansible_user}
+          ansible_port: ${worker.ansible_port}
+          ansible_ssh_private_key_file: ${worker.private_key}
+          ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+%{ endfor ~}
+EOT
+  filename = "${path.module}/inventory.yml"
 }
 
 resource "null_resource" "ansible_provision" {
     provisioner "local-exec"{
-        command = "sleep 60 && ansible-playbook -i ${local_file.inventory.filename} ../tests/ansible-role-jenkins-playbook-test.yml"
+        command = "sleep 60 && ansible-playbook -i ${local_file.inventory.filename} ../roles/jenkins/tests/ansible-playbook.yml"
+        # command = "sleep 60 && ansible-playbook -i ${local_file.inventory.filename} ../roles/ansible-role-jenkins-playbook-test.yml"
 
     }
   depends_on = [ aws_instance.jenkins_master ]
