@@ -6,6 +6,11 @@ resource "aws_instance" "jenkins_master" {
   ami           = "ami-040e71e7b8391cae4" 
   instance_type = var.instance_type
   key_name      = var.key_name
+
+  user_data = <<-EOF
+              #!/bin/bash
+              echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+              EOF
   tags = {
     Name = "Inff-Jenkins-Master"
   }
@@ -23,6 +28,10 @@ resource "aws_instance" "jenkins_slave" {
   ami           = "ami-040e71e7b8391cae4" 
   instance_type = var.instance_type
   key_name      = var.key_name
+  user_data = <<-EOF
+              #!/bin/bash
+              echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+              EOF
   tags = {
     Name = "Inff-Jenkins-Slave"
   }
@@ -65,15 +74,21 @@ resource "aws_security_group" "inff-jenkins-slave-sg"{
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+    ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
-resource "aws_security_group_rule" "slave_allow_ssh_from_master" {
-    type                     = "ingress"
-    from_port                = 22
-    to_port                  = 22
-    protocol                 = "tcp"
-    security_group_id        = aws_security_group.inff-jenkins-slave-sg.id
-    source_security_group_id = aws_security_group.inff-jenkins-master-sg.id
-}
+# resource "aws_security_group_rule" "slave_allow_ssh_from_master" {
+#     type                     = "ingress"
+#     from_port                = 22
+#     to_port                  = 22
+#     protocol                 = "tcp"
+#     security_group_id        = aws_security_group.inff-jenkins-slave-sg.id
+#     source_security_group_id = aws_security_group.inff-jenkins-master-sg.id
+# }
 # resource "local_file" "inventory" {
 #   content = <<EOT
 # [test]
@@ -87,31 +102,29 @@ all:
   children:
     master:
       hosts:
-        ${var.master_node.name}:
-          ansible_host: ${var.master_node.ansible_host}
-          ansible_host_alias: ${var.master_node.alias}
-          ansible_user: ${var.master_node.ansible_user}
-          ansible_port: ${var.master_node.ansible_port}
-          ansible_ssh_private_key_file: ${var.master_node.private_key}
+        master-node:
+          ansible_host: ${aws_instance.jenkins_master.public_ip}
+          ansible_host_alias: ${aws_instance.jenkins_master.public_ip}
+          ansible_user: ubuntu
+          ansible_port: 22
+          ansible_ssh_private_key_file: ${var.ssh_private_key}
           ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
     worker:
       hosts:
-%{ for worker in var.worker_nodes ~}
-        ${worker.name}:
-          ansible_host: ${worker.ansible_host}
-          ansible_host_alias: ${worker.alias}
-          ansible_user: ${worker.ansible_user}
-          ansible_port: ${worker.ansible_port}
-          ansible_ssh_private_key_file: ${worker.private_key}
+        worker-1-node:
+          ansible_host: ${aws_instance.jenkins_slave.public_ip}
+          ansible_host_alias: ${aws_instance.jenkins_slave.public_ip}
+          ansible_user: ubuntu
+          ansible_port: 22
+          ansible_ssh_private_key_file: ${var.ssh_private_key}
           ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
-%{ endfor ~}
 EOT
   filename = "${path.module}/inventory.yml"
 }
 
 resource "null_resource" "ansible_provision" {
     provisioner "local-exec"{
-        command = "sleep 60 && ansible-playbook -i ${local_file.inventory.filename} ../roles/jenkins/tests/ansible-playbook.yml"
+        command = "export ANSIBLE_CONFIG=${path.module}/../ansible.cfg && sleep 60 && ansible-playbook -i ${local_file.inventory.filename} ../roles/jenkins/tests/ansible-playbook.yml "
         # command = "sleep 60 && ansible-playbook -i ${local_file.inventory.filename} ../roles/ansible-role-jenkins-playbook-test.yml"
 
     }

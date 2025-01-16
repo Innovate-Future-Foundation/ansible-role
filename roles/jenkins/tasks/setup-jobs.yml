@@ -5,6 +5,8 @@
     file_type: file
   register: job_templates
   delegate_to: localhost
+  vars:
+    ansible_become: false
   run_once: true
 
 - name: Extract Jenkins job names without extensions

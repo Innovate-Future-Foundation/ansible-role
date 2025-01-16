@@ -5,7 +5,7 @@ After=network.target
 [Service]
 User=jenkins
 Group=jenkins
-ExecStart=/usr/bin/java -jar /opt/jenkins-agent.jar \
+ExecStart=/usr/bin/java -jar /opt/agent.jar \
           -url http://{{ jenkins_master_hostname }}:{{ jenkins_http_port }} \
           -secret @{{ jenkins_home }}/secret.key \
           -name {{ inventory_hostname }} \
