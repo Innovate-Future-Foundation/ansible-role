@@ -2,37 +2,167 @@
 ---
 # tasks file for certbot
 
-- name: Install certbot and dependencies
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  become: yes
+
+- name: Install prerequisite packages
   ansible.builtin.apt:
     name:
-      - certbot
-      - python3-certbot
+      - ca-certificates
+      - apt-transport-https
+      - software-properties-common
+      - lsb-release
+      - wget
+      - systemd
     state: present
-    update_cache: yes
+    force_apt_get: yes
+  become: yes
 
-- name: Create directory for self-signed certificates
+- name: Create base letsencrypt directory
   ansible.builtin.file:
-    path: "{{ certbot_cert_dir }}"
+    path: /etc/letsencrypt
     state: directory
     mode: "0755"
+    owner: root
+    group: root
+  become: yes
 
-- name: Generate self-signed certificate
-  ansible.builtin.command:
-    cmd: >
-      openssl req -x509 -nodes -days {{ certbot_cert_validity_days }}
-      -newkey rsa:2048
-      -keyout {{ certbot_cert_dir }}/privkey.pem
-      -out {{ certbot_cert_dir }}/fullchain.pem
-      -subj "/C={{ certbot_country }}/ST={{ certbot_state }}/L={{ certbot_locality }}/O={{ certbot_organization }}/CN={{ certbot_common_name }}"
-  args:
-    creates: "{{ certbot_cert_dir }}/fullchain.pem"
-
-- name: Set certificate permissions
+- name: Create renewal-hooks base directory
   ansible.builtin.file:
-    path: "{{ item }}"
-    mode: "0600"
-    owner: jenkins
-    group: jenkins
+    path: /etc/letsencrypt/renewal-hooks
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  become: yes
+
+- name: Create renewal hook directories
+  ansible.builtin.file:
+    path: "/etc/letsencrypt/renewal-hooks/{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
   loop:
-    - "{{ certbot_cert_dir }}/privkey.pem"
-    - "{{ certbot_cert_dir }}/fullchain.pem"
+    - pre
+    - post
+    - deploy
+  become: yes
+
+- name: Verify hook directories exist
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/renewal-hooks/{{ item }}"
+  loop:
+    - pre
+    - post
+    - deploy
+  register: hook_dirs_check
+  become: yes
+
+- name: Debug hook directories
+  ansible.builtin.debug:
+    msg: "Directory {{ item.item }} exists: {{ item.stat.exists }}"
+  loop: "{{ hook_dirs_check.results }}"
+
+- name: Fail if directories don't exist
+  ansible.builtin.fail:
+    msg: "Failed to create directory {{ item.item }}"
+  when: not item.stat.exists
+  loop: "{{ hook_dirs_check.results }}"
+
+- name: Debug current directory permissions
+  ansible.builtin.command: "ls -la /etc"
+  register: etc_perms
+  become: yes
+
+- name: Show etc permissions
+  ansible.builtin.debug:
+    var: etc_perms
+
+- name: Force create /etc/letsencrypt directory
+  ansible.builtin.file:
+    path: /etc/letsencrypt
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  become: yes
+
+- name: Force create renewal-hooks directory
+  ansible.builtin.file:
+    path: /etc/letsencrypt/renewal-hooks
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  become: yes
+
+- name: Force create hook directories
+  ansible.builtin.file:
+    path: "/etc/letsencrypt/renewal-hooks/{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  loop:
+    - pre
+    - post
+    - deploy
+  become: yes
+
+- name: Verify directory creation
+  ansible.builtin.command: "ls -la /etc/letsencrypt/renewal-hooks"
+  register: hook_dirs
+  become: yes
+
+- name: Show hook directories
+  ansible.builtin.debug:
+    var: hook_dirs
+
+- name: Debug current directory
+  ansible.builtin.command: pwd
+  register: current_dir
+
+- name: Show current directory
+  ansible.builtin.debug:
+    var: current_dir
+
+- name: Create systemd directory
+  ansible.builtin.file:
+    path: /etc/systemd/system
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  become: yes
+
+- name: Create certbot timer file
+  ansible.builtin.template:
+    src: certbot.timer.j2
+    dest: /etc/systemd/system/certbot.timer
+    mode: "0644"
+    owner: root
+    group: root
+    force: yes
+  become: yes
+
+- name: Create certbot service file
+  ansible.builtin.template:
+    src: certbot.service.j2
+    dest: /etc/systemd/system/certbot.service
+    mode: "0644"
+    owner: root
+    group: root
+    force: yes
+  become: yes
+
+- name: Enable and start certbot timer
+  ansible.builtin.systemd:
+    name: certbot.timer
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  become: yes

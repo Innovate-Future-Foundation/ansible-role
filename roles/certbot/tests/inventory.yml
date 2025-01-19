@@ -1,0 +1,12 @@
+all:
+  children:
+    webservers:
+      hosts:
+        webserver-node:
+          ansible_connection: ssh
+          ansible_host: localhost
+          ansible_port: 23
+          ansible_user: root
+          remote_tmp: /var/tmp
+          ansible_remote_tmp: /var/tmp
+          ansible_ssh_extra_args: "-o StrictHostKeyChecking=no"
