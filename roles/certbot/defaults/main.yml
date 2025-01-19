@@ -1,0 +1,14 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for certbot
+
+# Certificate settings
+certbot_cert_dir: /etc/jenkins/certs
+certbot_cert_validity_days: 365
+
+# Certificate information
+certbot_country: "US"
+certbot_state: "California"
+certbot_locality: "San Francisco"
+certbot_organization: "Jenkins CI/CD"
+certbot_common_name: "{{ ansible_fqdn | default(ansible_host) | default('localhost') }}"

@@ -1,0 +1,10 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Test Certbot Role
+  hosts: localhost
+  remote_user: root
+  vars:
+    certbot_organization: "Test Organization"
+    certbot_common_name: "test.example.com"
+  roles:
+    - certbot

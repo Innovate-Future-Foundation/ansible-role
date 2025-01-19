@@ -1,0 +1,20 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Check if certificates exist
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: cert_files
+      loop:
+        - /etc/jenkins/certs/privkey.pem
+        - /etc/jenkins/certs/fullchain.pem
+
+    - name: Verify certificates exist
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.mode == '0600'
+        fail_msg: "Certificate file {{ item.item }} does not exist or has wrong permissions"
+      loop: "{{ cert_files.results }}"

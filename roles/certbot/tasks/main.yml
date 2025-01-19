@@ -1,0 +1,38 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for certbot
+
+- name: Install certbot and dependencies
+  ansible.builtin.apt:
+    name:
+      - certbot
+      - python3-certbot
+    state: present
+    update_cache: yes
+
+- name: Create directory for self-signed certificates
+  ansible.builtin.file:
+    path: "{{ certbot_cert_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Generate self-signed certificate
+  ansible.builtin.command:
+    cmd: >
+      openssl req -x509 -nodes -days {{ certbot_cert_validity_days }}
+      -newkey rsa:2048
+      -keyout {{ certbot_cert_dir }}/privkey.pem
+      -out {{ certbot_cert_dir }}/fullchain.pem
+      -subj "/C={{ certbot_country }}/ST={{ certbot_state }}/L={{ certbot_locality }}/O={{ certbot_organization }}/CN={{ certbot_common_name }}"
+  args:
+    creates: "{{ certbot_cert_dir }}/fullchain.pem"
+
+- name: Set certificate permissions
+  ansible.builtin.file:
+    path: "{{ item }}"
+    mode: "0600"
+    owner: jenkins
+    group: jenkins
+  loop:
+    - "{{ certbot_cert_dir }}/privkey.pem"
+    - "{{ certbot_cert_dir }}/fullchain.pem"

@@ -1,0 +1,71 @@
+---
+dependency:
+  name: galaxy
+  options:
+    requirements-file: requirements.yml
+driver:
+  name: docker
+platforms:
+  - name: instance
+    image: ubuntu:22.04
+    pre_build_image: false
+    dockerfile: Dockerfile
+    command: "/lib/systemd/systemd"
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    privileged: true
+    cgroupns_mode: host
+    groups:
+      - master
+      - worker
+    connection_options:
+      ansible_connection: docker
+      ansible_user: root
+      ansible_become: false
+    hostname: localhost
+    networks:
+      - name: jenkins-network
+    etc_hosts:
+      "localhost": "127.0.0.1"
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_FORCE_COLOR: "true"
+  config_options:
+    defaults:
+      become: false
+  log: true
+  inventory:
+    host_vars:
+      instance:
+        ansible_host_alias: localhost
+    group_vars:
+      all:
+        jenkins_admin_username: admin
+        jenkins_admin_password: admin
+        jenkins_http_port: 8080
+        jenkins_url_prefix: ""
+        jenkins_home: /var/lib/jenkins
+        jenkins_process_user: jenkins
+        jenkins_process_group: jenkins
+        jenkins_connection_delay: 5
+        jenkins_connection_retries: 60
+        jenkins_cli_jar_location: /opt/jenkins-cli.jar
+        jenkins_agent_jar_location: /opt/agent.jar
+        jenkins_master_hostname: localhost
+        jenkins_master_http_port: 8080
+      master:
+        jenkins_worker_nodes_cnt: 2
+        ansible_become: false
+        ansible_user: root
+        ansible_host_alias: localhost
+        jenkins_hostname: localhost
+        jenkins_http_port: 8080
+      worker:
+        ansible_host_alias: localhost
+        jenkins_master_hostname: localhost
+        jenkins_master_http_port: 8080
+
+verifier:
+  name: ansible
