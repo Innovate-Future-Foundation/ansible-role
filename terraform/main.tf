@@ -7,10 +7,6 @@ resource "aws_instance" "jenkins_master" {
   instance_type = var.instance_type
   key_name      = var.key_name
 
-  user_data = <<-EOF
-              #!/bin/bash
-              echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-              EOF
   tags = {
     Name = "Inff-Jenkins-Master"
   }
@@ -25,15 +21,12 @@ resource "aws_instance" "jenkins_master" {
 }
 
 resource "aws_instance" "jenkins_slave" {
+  count         = var.slave_count
   ami           = "ami-040e71e7b8391cae4" 
   instance_type = var.instance_type
   key_name      = var.key_name
-  user_data = <<-EOF
-              #!/bin/bash
-              echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-              EOF
   tags = {
-    Name = "Inff-Jenkins-Slave"
+    Name = "Inff-Jenkins-Slave-${count.index + 1}"
   }
 
   security_groups = ["inff-jenkins-slave-sg"]
@@ -81,21 +74,15 @@ resource "aws_security_group" "inff-jenkins-slave-sg"{
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-# resource "aws_security_group_rule" "slave_allow_ssh_from_master" {
-#     type                     = "ingress"
-#     from_port                = 22
-#     to_port                  = 22
-#     protocol                 = "tcp"
-#     security_group_id        = aws_security_group.inff-jenkins-slave-sg.id
-#     source_security_group_id = aws_security_group.inff-jenkins-master-sg.id
-# }
-# resource "local_file" "inventory" {
-#   content = <<EOT
-# [test]
-# ${aws_instance.jenkins_master.public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=${var.ssh_private_key} ansible_ssh_extra_args='-o StrictHostKeyChecking=no'
-#   EOT
-#   filename = "${path.module}/inventory.ini"
-# }
+terraform {
+  backend "s3" {
+    bucket         = "terraform-states-for-jenkins-inff"
+    key            = "./terraform.tfstate"  
+    region         = "ap-southeast-2"           
+    dynamodb_table = "terraform-lock-table"    
+    encrypt        = true                       
+  }
+}
 resource "local_file" "inventory" {
   content = <<EOT
 all:
@@ -111,13 +98,15 @@ all:
           ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
     worker:
       hosts:
-        worker-1-node:
-          ansible_host: ${aws_instance.jenkins_slave.public_ip}
-          ansible_host_alias: ${aws_instance.jenkins_slave.public_ip}
+%{ for i, instance in aws_instance.jenkins_slave ~}
+        worker-${i + 1}-node:
+          ansible_host: ${instance.public_ip}
+          ansible_host_alias: worker-${i + 1}
           ansible_user: ubuntu
           ansible_port: 22
           ansible_ssh_private_key_file: ${var.ssh_private_key}
           ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+%{ endfor ~}
 EOT
   filename = "${path.module}/inventory.yml"
 }
@@ -128,5 +117,5 @@ resource "null_resource" "ansible_provision" {
         # command = "sleep 60 && ansible-playbook -i ${local_file.inventory.filename} ../roles/ansible-role-jenkins-playbook-test.yml"
 
     }
-  depends_on = [ aws_instance.jenkins_master ]
+  depends_on = [ aws_instance.jenkins_master, aws_instance.jenkins_slave ]
 }

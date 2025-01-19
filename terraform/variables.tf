@@ -15,6 +15,10 @@ variable "ssh_private_key" {
   description = "The path to the SSH private key file"
   default = "~/JR-DEVOPS.pem"
 }
+variable "slave_count" {
+  description = "Number of Jenkins Slave nodes to create"
+  default     = 1
+}
 # variable "master_node" {
 #   default = {
 #     name            = "master-node"
