@@ -1,0 +1,29 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for dotnet-ef
+- name: Install dotnet-ef
+  ansible.builtin.shell: >
+    dotnet tool install --tool-path /usr/lib/dotnet/tools dotnet-ef
+  args:
+    creates: /usr/lib/dotnet/tools/dotnet-ef
+
+- name: Create symbolic link for dotnet-ef
+  ansible.builtin.file:
+    src: /usr/lib/dotnet/tools/dotnet-ef
+    dest: /usr/bin/dotnet-ef
+    state: link
+  become: yes
+
+- name: Create dotnet environment script
+  ansible.builtin.copy:
+    dest: /etc/profile.d/dotnet_env.sh
+    content: |
+      export DOTNET_ROOT=/usr/lib/dotnet
+      export PATH=$PATH:/usr/lib/dotnet/tools
+    mode: '0755'
+  become: yes
+
+- name: Source the dotnet environment script
+  ansible.builtin.shell: source /etc/profile.d/dotnet_env.sh
+  args:
+    executable: /bin/bash

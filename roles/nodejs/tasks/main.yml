@@ -1,0 +1,7 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for nodejs
+- name: Install NPM
+  ansible.builtin.apt:
+    name: npm
+    state: present

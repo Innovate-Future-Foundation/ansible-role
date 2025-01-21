@@ -1,0 +1,21 @@
+galaxy_info:
+  author: Mark Ma
+  description: DevOps Engineer
+  company: Innovate Future Foundation
+
+  license: license Apache-2.0
+
+  min_ansible_version: 2.18.0
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+
+  galaxy_tags: 
+    - devops
+    - jenkins
+    - ci
+    - ubuntu
+
+dependencies: []

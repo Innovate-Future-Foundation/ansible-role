@@ -1,5 +1,5 @@
-- name: Installed JDK
-  hosts: test
+- name: Configure Jenkins Cluster
+  hosts: all
   become: yes
   vars:
     jdk_version: openjdk-21
@@ -7,3 +7,26 @@
     - role: base
     - role: java
     - role: jenkins
+  
+- name: Configure Jenkins Workers
+  hosts: worker
+  tasks:
+    - name: Include NodeJS Role
+      ansible.builtin.include_role:
+        name: nodejs
+      when: "'nodejs' in roles"
+
+    - name: Include docker-cli Role
+      ansible.builtin.include_role:
+        name: docker-cli
+      when: "'docker-cli' in roles"
+
+    - name: Include dotnet Role
+      ansible.builtin.include_role:
+        name: dotnet
+      when: "'dotnet' in roles"
+    
+    - name: Include dotnet-ef Role
+      ansible.builtin.include_role:
+        name: dotnet-ef
+      when: "'dotnet-ef' in roles"

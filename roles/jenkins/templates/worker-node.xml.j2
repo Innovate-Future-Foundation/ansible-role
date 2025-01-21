@@ -6,6 +6,10 @@
   <mode>EXCLUSIVE</mode>
   <retentionStrategy class="hudson.slaves.RetentionStrategy$Always"/>
   <launcher class="hudson.slaves.JNLPLauncher"/>
+  {% if roles is defined and roles | length > 0 %}
+  <label>{{ roles | join(' ') }}</label>
+  {% else %}
   <label>worker</label>
+  {% endif %}
   <nodeProperties/>
 </slave>

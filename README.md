@@ -106,10 +106,10 @@ The followings are the planned roles needed for this project:
 - [x] **`jenkins`**: Installs Jenkins service. Configure Jenkins. Install Jenkins plugins.
 - [ ] **`certibot`**: Installs certibot, configure self-signed certificate.
 - [ ] **`nginx`**: Installs Nginx service, configure Nginx to expose secure HTTPS port, proxy for backend Jenkins service.
-- [ ] **`docker-cli`**: Installs docker-cli to build docker images.
-- [ ] **`nodejs`**: Installs Node.js for frontend code build environment.
-- [ ] **`dotnet`**: Installs DotNet for backend code build environment.
-- [ ] **`dotnet-ef`**: Installs DotNet Entity Framework tool for database migration.
+- [x] **`docker-cli`**: Installs docker-cli to build docker images.
+- [x] **`nodejs`**: Installs Node.js for frontend code build environment.
+- [x] **`dotnet`**: Installs DotNet for backend code build environment.
+- [x] **`dotnet-ef`**: Installs DotNet Entity Framework tool for database migration.
 
 Dependencies
 ------------
@@ -121,7 +121,7 @@ Example Playbook
 
 Below is an example of how to use your role:
 ```yaml
-- name: Installed JDK
+- name: Install Jenkins
   hosts: test
   become: yes
   vars:

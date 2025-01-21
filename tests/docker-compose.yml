@@ -22,3 +22,13 @@ services:
     restart: always
     volumes:
       - ~/.ssh/id_rsa.pub:/root/id_rsa.pub:ro
+
+  worker2:
+    container_name: jenkins-worker2
+    image: ubuntu-with-ssh
+    tty: true
+    ports:
+      - "25:22"
+    restart: always
+    volumes:
+      - ~/.ssh/id_rsa.pub:/root/id_rsa.pub:ro

@@ -1,0 +1,17 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Dotnet-ef role test
+  hosts: all
+  become: yes
+  roles:
+    - dotnet-ef
+
+  tasks:
+    - name: Verify DOTNET_ROOT environment variable
+      ansible.builtin.command: echo $DOTNET_ROOT
+      register: dotnet_root
+      changed_when: false
+
+    - name: Display DOTNET_ROOT
+      ansible.builtin.debug:
+        var: dotnet_root.stdout

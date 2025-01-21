@@ -1,0 +1,11 @@
+all:
+  children:
+    master:
+      hosts:
+        master-node:
+    worker:
+      hosts:
+        worker-1-node:
+          roles: ['nodejs']
+        worker-2-node:
+          roles: ['dotnet', 'dotnet-ef', 'docker-cli']
