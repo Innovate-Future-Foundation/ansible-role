@@ -27,3 +27,4 @@
   ansible.builtin.shell: source /etc/profile.d/dotnet_env.sh
   args:
     executable: /bin/bash
+  changed_when: false
