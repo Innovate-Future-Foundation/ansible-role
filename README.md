@@ -106,6 +106,7 @@ The followings are the planned roles needed for this project:
 - [x] **`jenkins`**: Installs Jenkins service. Configure Jenkins. Install Jenkins plugins.
 - [ ] **`certibot`**: Installs certibot, configure self-signed certificate.
 - [ ] **`nginx`**: Installs Nginx service, configure Nginx to expose secure HTTPS port, proxy for backend Jenkins service.
+- [x] **`aws-cli`**: Installs aws-cli for manipulating AWS resources.
 - [x] **`docker-cli`**: Installs docker-cli to build docker images.
 - [x] **`nodejs`**: Installs Node.js for frontend code build environment.
 - [x] **`dotnet`**: Installs DotNet for backend code build environment.

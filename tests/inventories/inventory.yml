@@ -6,6 +6,6 @@ all:
     worker:
       hosts:
         worker-1-node:
-          roles: ['nodejs']
+          roles: ['aws-cli', 'nodejs']
         worker-2-node:
-          roles: ['dotnet', 'dotnet-ef', 'docker-cli']
+          roles: ['aws-cli', 'dotnet', 'dotnet-ef', 'docker-cli']

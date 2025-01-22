@@ -1,0 +1,37 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: AWS-CLI role test
+  hosts: localhost
+  remote_user: root
+  roles:
+    - aws-cli
+
+  tasks:
+    - name: Check if AWS CLI binary exists
+      ansible.builtin.stat:
+        path: /usr/local/bin/aws
+      register: aws_cli_binary
+
+    - name: Verify AWS CLI binary is present
+      ansible.builtin.debug:
+        msg: "AWS CLI binary exists at {{ aws_cli_binary.stat.path }}"
+      when: aws_cli_binary.stat.exists
+
+    - name: Run AWS CLI version command
+      ansible.builtin.command: "aws --version"
+      register: aws_cli_version
+      failed_when: aws_cli_version.rc != 0
+
+    - name: Validate AWS CLI version output
+      ansible.builtin.debug:
+        msg: "AWS CLI Version: {{ aws_cli_version.stdout }}"
+
+    - name: Ensure temporary files are removed
+      ansible.builtin.stat:
+        path: /tmp/awscliv2.zip
+      register: temp_aws_zip
+
+    - name: Confirm /tmp/awscliv2.zip does not exist
+      ansible.builtin.debug:
+        msg: "Temporary AWS CLI zip file was cleaned up."
+      when: not temp_aws_zip.stat.exists

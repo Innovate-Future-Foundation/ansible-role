@@ -32,3 +32,4 @@ services:
     restart: always
     volumes:
       - ~/.ssh/id_rsa.pub:/root/id_rsa.pub:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro

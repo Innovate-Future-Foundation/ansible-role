@@ -11,6 +11,11 @@
 - name: Configure Jenkins Workers
   hosts: worker
   tasks:
+    - name: Include aws-cli Role
+      ansible.builtin.include_role:
+        name: aws-cli
+      when: "'aws-cli' in roles"
+      
     - name: Include NodeJS Role
       ansible.builtin.include_role:
         name: nodejs
