@@ -7,7 +7,7 @@ Requirements
 ------------
 
 - Ansible 2.16 or higher installed on the control node.
-- An Ubuntu server with `sudo` privileges.
+- An Ubuntu server with `sudo` privileges and ssh server enabled.
 
 > [!TIP]
 > For local tests, you may use the `tests/docker-compose.yml` file to start a Ubuntu 24.04 container.
