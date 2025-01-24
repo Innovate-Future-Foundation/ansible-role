@@ -20,7 +20,13 @@ Configure Jenkins Standalone
     git clone https://github.com/Innovate-Future-Foundation/ansible-role-jenkins.git ansible-role-jenkins
     ```
 
-2. Update the `inventory-standalone.yml` file:
+2. Export environment varibale
+    ```bash
+    export ANSIBLE_CONFIG=$PWD/ansible.cfg
+    ```
+    Execute under the project root directory. This tells ansible where to find the roles.
+
+3. Update the `inventory-standalone.yml` file:
     ```yml
     all:
       children:
@@ -38,7 +44,7 @@ Configure Jenkins Standalone
 
     For detailed inventory file configurations, see [Ansible doc](https://docs.ansible.com/ansible/latest/inventory_guide/intro_inventory.html#how-to-build-your-inventory).
 
-3. Run the playbook:
+4. Run the playbook:
     ```bash
     ansible-playbook -i inventory-standalone.yml playbook-standalone.yml
     ```
@@ -49,7 +55,13 @@ Configure Jenkins Cluster
     git clone https://github.com/Innovate-Future-Foundation/ansible-role-jenkins.git ansible-role-jenkins
     ```
 
-2. Update the `inventory-standalone.yml` file:
+2. Export environment varibale
+    ```bash
+    export ANSIBLE_CONFIG=$PWD/ansible.cfg
+    ```
+    Execute under the project root directory. This tells ansible where to find the roles.
+
+3. Update the `inventory-standalone.yml` file:
     ```yml
     all:
       children:
@@ -85,7 +97,7 @@ Configure Jenkins Cluster
 
     For detailed inventory file configurations, see [Ansible doc](https://docs.ansible.com/ansible/latest/inventory_guide/intro_inventory.html#how-to-build-your-inventory).
 
-3. Run the playbook:
+4. Run the playbook:
     ```bash
     ansible-playbook -i inventory-cluster.yml playbook-cluster.yml
     ```
