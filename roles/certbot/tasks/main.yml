@@ -21,9 +21,9 @@
     force_apt_get: yes
   become: yes
 
-- name: Create base letsencrypt directory
+- name: Create certificate directory
   ansible.builtin.file:
-    path: /etc/letsencrypt
+    path: "{{ certbot_cert_dir }}"
     state: directory
     mode: "0755"
     owner: root
@@ -32,7 +32,7 @@
 
 - name: Create renewal-hooks base directory
   ansible.builtin.file:
-    path: /etc/letsencrypt/renewal-hooks
+    path: "{{ certbot_renewal_hooks_dir }}"
     state: directory
     mode: "0755"
     owner: root
@@ -41,7 +41,7 @@
 
 - name: Create renewal hook directories
   ansible.builtin.file:
-    path: "/etc/letsencrypt/renewal-hooks/{{ item }}"
+    path: "{{ certbot_renewal_hooks_dir }}/{{ item }}"
     state: directory
     mode: "0755"
     owner: root
@@ -54,7 +54,7 @@
 
 - name: Verify hook directories exist
   ansible.builtin.stat:
-    path: "/etc/letsencrypt/renewal-hooks/{{ item }}"
+    path: "{{ certbot_renewal_hooks_dir }}/{{ item }}"
   loop:
     - pre
     - post
@@ -159,6 +159,11 @@
     force: yes
   become: yes
 
+- name: Check if running in container
+  ansible.builtin.stat:
+    path: /.dockerenv
+  register: dockerenv
+
 - name: Enable and start certbot timer
   ansible.builtin.systemd:
     name: certbot.timer
@@ -166,3 +171,4 @@
     state: started
     daemon_reload: yes
   become: yes
+  when: not dockerenv.stat.exists
