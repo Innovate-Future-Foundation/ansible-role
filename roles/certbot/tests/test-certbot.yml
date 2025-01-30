@@ -256,3 +256,45 @@
       - timer_file.stat.exists
       - service_file.stat.exists
     msg: "Certbot renewal timer files are not properly configured!"
+
+- name: Verify certificate directory exists
+  ansible.builtin.stat:
+    path: "{{ certbot_cert_dir }}"
+  register: cert_dir
+  become: yes
+
+- name: Debug certificate directory
+  ansible.builtin.debug:
+    var: cert_dir
+
+- name: Verify renewal hooks directory exists
+  ansible.builtin.stat:
+    path: "{{ certbot_renewal_hooks_dir }}"
+  register: hooks_dir
+  become: yes
+
+- name: Debug hooks directory
+  ansible.builtin.debug:
+    var: hooks_dir
+
+- name: Verify systemd files exist
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - /etc/systemd/system/certbot.timer
+    - /etc/systemd/system/certbot.service
+  register: systemd_files
+  become: yes
+
+- name: Debug systemd files
+  ansible.builtin.debug:
+    var: systemd_files
+
+- name: Verify Certbot configuration
+  ansible.builtin.assert:
+    that:
+      - cert_dir.stat.exists
+      - hooks_dir.stat.exists
+      - systemd_files.results[0].stat.exists
+      - systemd_files.results[1].stat.exists
+    msg: "Certbot configuration files are not properly configured!"

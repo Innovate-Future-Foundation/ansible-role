@@ -2,6 +2,10 @@
 - name: Configure Certbot
   hosts: all
   become: yes
+  vars:
+    certbot_cert_dir: /etc/letsencrypt/live
+    certbot_renewal_hooks_dir: /etc/letsencrypt/renewal-hooks
+    certbot_common_name: "{{ ansible_fqdn | default(ansible_host) | default('localhost') }}"
   pre_tasks:
     - name: Create tmp directory
       ansible.builtin.file:
@@ -29,7 +33,7 @@
 
     - name: Include certbot role
       ansible.builtin.include_role:
-        name: "{{ playbook_dir | dirname | dirname }}"
+        name: certbot
 
     - name: Debug timer file
       ansible.builtin.stat:
