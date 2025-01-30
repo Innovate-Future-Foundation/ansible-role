@@ -1,31 +1,19 @@
 ---
-- name: Check if certbot is installed
+- name: Check if certbot and cron are installed
   ansible.builtin.package_facts:
     manager: apt
   register: pkg_facts
 
+- name: Verify required packages
+  ansible.builtin.assert:
+    that:
+      - "'cron' in ansible_facts.packages"
+      - "'certbot' in ansible_facts.packages"
+    msg: "Required packages (cron, certbot) are not installed!"
+
 - name: Debug available packages
   ansible.builtin.debug:
     var: ansible_facts.packages
-
-- name: Debug apt cache update status
-  ansible.builtin.command: apt-get update
-  register: apt_update_result
-  changed_when: false
-
-- name: Debug apt cache status
-  ansible.builtin.debug:
-    var: apt_update_result
-
-- name: Debug certbot installation attempt
-  ansible.builtin.command: apt-get install -y certbot
-  register: certbot_install_result
-  changed_when: false
-  ignore_errors: yes
-
-- name: Debug certbot installation output
-  ansible.builtin.debug:
-    var: certbot_install_result
 
 - name: Check certbot package availability
   ansible.builtin.command: apt-cache policy certbot
@@ -43,8 +31,6 @@
     msg: |
       Certbot package is not installed!
       Available packages: {{ ansible_facts.packages.keys() | list }}
-      Apt update result: {{ apt_update_result }}
-      Install attempt result: {{ certbot_install_result }}
       Package policy: {{ certbot_policy }}
 
 - name: Verify Certbot binary exists

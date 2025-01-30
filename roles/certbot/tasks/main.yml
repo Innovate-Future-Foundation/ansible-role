@@ -17,6 +17,7 @@
       - lsb-release
       - wget
       - systemd
+      - cron
     state: present
     force_apt_get: yes
   become: yes
