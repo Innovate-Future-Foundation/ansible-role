@@ -7,28 +7,99 @@ Requirements
 ------------
 
 - Ansible 2.16 or higher installed on the control node.
-- An Ubuntu server with `sudo` privileges.
+- An Ubuntu server with `sudo` privileges and ssh server enabled.
 
 > [!TIP]
 > For local tests, you may use the `tests/docker-compose.yml` file to start a Ubuntu 24.04 container.
 
 How to Use
 ------------
+Configure Jenkins Standalone
 1. Clone this repository to your Ansible roles directory:
     ```bash
     git clone https://github.com/Innovate-Future-Foundation/ansible-role-jenkins.git ansible-role-jenkins
     ```
 
-2. Create an `inventory` file:
+2. Export environment varibale
+    ```bash
+    export ANSIBLE_CONFIG=$PWD/ansible.cfg
     ```
-    [test_ubuntu]
-    localhost ansible_user=root ansible_port=23 ansible_ssh_private_key_file=~/.ssh/id_rsa ansible_ssh_extra_args='-o StrictHostKeyChecking=no'
+    Execute under the project root directory. This tells ansible where to find the roles.
+
+3. Update the `inventory-standalone.yml` file:
+    ```yml
+    all:
+      children:
+        master:
+          hosts:
+            master-node:
+              ansible_host: localhost
+              ansible_host_alias: jenkins-master
+              ansible_user: root
+              ansible_port: 23
+              ansible_ssh_private_key_file: ~/.ssh/id_rsa
+              ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
     ```
+    Replace the ssh connection details.
+
     For detailed inventory file configurations, see [Ansible doc](https://docs.ansible.com/ansible/latest/inventory_guide/intro_inventory.html#how-to-build-your-inventory).
 
-3. Run the playbook:
+4. Run the playbook:
     ```bash
-    ansible-playbook -i inventory playbook.yml
+    ansible-playbook -i inventory-standalone.yml playbook-standalone.yml
+    ```
+
+Configure Jenkins Cluster
+1. Clone this repository to your Ansible roles directory:
+    ```bash
+    git clone https://github.com/Innovate-Future-Foundation/ansible-role-jenkins.git ansible-role-jenkins
+    ```
+
+2. Export environment varibale
+    ```bash
+    export ANSIBLE_CONFIG=$PWD/ansible.cfg
+    ```
+    Execute under the project root directory. This tells ansible where to find the roles.
+
+3. Update the `inventory-standalone.yml` file:
+    ```yml
+    all:
+      children:
+        master:
+          hosts:
+            master-node:
+              ansible_host: localhost
+              ansible_host_alias: jenkins-master
+              ansible_user: root
+              ansible_port: 23
+              ansible_ssh_private_key_file: ~/.ssh/id_rsa
+              ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+        worker:
+          hosts:
+            worker-1-node:
+              ansible_host: localhost
+              ansible_host_alias: jenkins-worker1
+              ansible_user: root
+              ansible_port: 24
+              ansible_ssh_private_key_file: ~/.ssh/id_rsa
+              ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+              roles: ['aws-cli', 'nodejs']
+            worker-2-node:
+              ansible_host: localhost
+              ansible_host_alias: jenkins-worker2
+              ansible_user: root
+              ansible_port: 25
+              ansible_ssh_private_key_file: ~/.ssh/id_rsa
+              ansible_ssh_extra_args: '-o StrictHostKeyChecking=no'
+              roles: ['aws-cli', 'dotnet', 'dotnet-ef', 'docker-cli']
+    ```
+    Replace the ssh connection details.
+
+    For detailed inventory file configurations, see [Ansible doc](https://docs.ansible.com/ansible/latest/inventory_guide/intro_inventory.html#how-to-build-your-inventory).
+
+4. Run the playbook:
+    ```bash
+    ansible-playbook -i inventory-cluster.yml playbook-cluster.yml
     ```
 
 File Structure
@@ -144,7 +215,11 @@ License
 
 This role is licensed under the Apache 2.0 License. See the `LICENSE` file for details.
 
-Author Information
+Contributors
 ------------------
 
-Developed by [Mark](https://github.com/markma85). Contributions are welcome!
+Developed by:
+- [Mark](https://github.com/markma85)
+- [Henry](https://github.com/henry22)
+
+Contributions are welcome!

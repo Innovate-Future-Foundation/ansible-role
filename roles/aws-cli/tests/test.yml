@@ -21,6 +21,7 @@
       ansible.builtin.command: "aws --version"
       register: aws_cli_version
       failed_when: aws_cli_version.rc != 0
+      changed_when: false
 
     - name: Validate AWS CLI version output
       ansible.builtin.debug:

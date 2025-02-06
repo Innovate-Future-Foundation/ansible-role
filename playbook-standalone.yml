@@ -1,0 +1,15 @@
+---
+- name: Configure Jenkins Standalone
+  hosts: all
+  become: yes
+  vars:
+    jdk_version: openjdk-21
+  roles:
+    - role: base
+    - role: java
+    - role: jenkins
+    - role: aws-cli
+    - role: nodejs
+    - role: docker-cli
+    - role: dotnet
+    - role: dotnet-ef
