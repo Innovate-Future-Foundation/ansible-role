@@ -1,0 +1,10 @@
+[Unit]
+Description=Certbot Renewal Service
+Documentation=https://certbot.eff.org/docs
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/certbot renew --quiet --agree-tos --cert-name {{ certbot_common_name }}
+
+[Install]
+WantedBy=multi-user.target

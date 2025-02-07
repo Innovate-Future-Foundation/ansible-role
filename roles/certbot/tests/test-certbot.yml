@@ -1,0 +1,295 @@
+---
+- name: Check if certbot and cron are installed
+  ansible.builtin.package_facts:
+    manager: apt
+  register: pkg_facts
+
+- name: Verify required packages
+  ansible.builtin.assert:
+    that:
+      - "'cron' in ansible_facts.packages"
+      - "'certbot' in ansible_facts.packages"
+    msg: "Required packages (cron, certbot) are not installed!"
+
+- name: Debug available packages
+  ansible.builtin.debug:
+    var: ansible_facts.packages
+
+- name: Check certbot package availability
+  ansible.builtin.command: apt-cache policy certbot
+  register: certbot_policy
+  changed_when: false
+
+- name: Debug certbot package availability
+  ansible.builtin.debug:
+    var: certbot_policy
+
+- name: Verify certbot installation
+  ansible.builtin.assert:
+    that:
+      - "'certbot' in ansible_facts.packages"
+    msg: |
+      Certbot package is not installed!
+      Available packages: {{ ansible_facts.packages.keys() | list }}
+      Package policy: {{ certbot_policy }}
+
+- name: Verify Certbot binary exists
+  ansible.builtin.stat:
+    path: /usr/bin/certbot
+  register: certbot_binary
+  changed_when: false
+
+- name: Verify Certbot binary exists and is executable
+  ansible.builtin.assert:
+    that:
+      - certbot_binary.stat.exists
+      - certbot_binary.stat.executable
+    msg: "Certbot binary does not exist or is not executable!"
+
+- name: Check Certbot version
+  ansible.builtin.command: /usr/bin/certbot --version
+  register: certbot_version
+  changed_when: false
+
+- name: Verify Certbot version command succeeds
+  ansible.builtin.assert:
+    that:
+      - certbot_version.rc == 0
+    msg: "Failed to get Certbot version!"
+
+- name: Verify Certbot configuration directory exists
+  ansible.builtin.stat:
+    path: /etc/letsencrypt
+  register: certbot_config_dir
+
+- name: Verify Certbot configuration directory
+  ansible.builtin.assert:
+    that:
+      - certbot_config_dir.stat.exists
+      - certbot_config_dir.stat.isdir
+    msg: "Certbot configuration directory does not exist!"
+
+- name: Debug directory existence before verification
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - /etc/letsencrypt/renewal-hooks/pre
+    - /etc/letsencrypt/renewal-hooks/post
+    - /etc/letsencrypt/renewal-hooks/deploy
+  register: debug_dirs
+
+- name: Show directory status
+  ansible.builtin.debug:
+    msg: "Directory {{ item.item }} exists: {{ item.stat.exists }}"
+  loop: "{{ debug_dirs.results }}"
+
+- name: Try to create directories manually in test
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  loop:
+    - /etc/letsencrypt
+    - /etc/letsencrypt/renewal-hooks
+    - /etc/letsencrypt/renewal-hooks/pre
+    - /etc/letsencrypt/renewal-hooks/post
+    - /etc/letsencrypt/renewal-hooks/deploy
+  become: yes
+
+- name: Debug directory creation results
+  ansible.builtin.command: "ls -la /etc/letsencrypt/renewal-hooks"
+  register: hook_contents
+  become: yes
+  ignore_errors: yes
+
+- name: Show hook contents
+  ansible.builtin.debug:
+    var: hook_contents
+
+- name: Verify Certbot renewal hook directories exist
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: certbot_hook_dirs
+  loop:
+    - /etc/letsencrypt/renewal-hooks/pre
+    - /etc/letsencrypt/renewal-hooks/post
+    - /etc/letsencrypt/renewal-hooks/deploy
+  become: yes
+
+- name: Debug hook directories in test
+  ansible.builtin.debug:
+    msg: "Directory {{ item.item }} exists: {{ item.stat.exists }}"
+  loop: "{{ certbot_hook_dirs.results }}"
+
+- name: Verify Certbot renewal hook directories
+  ansible.builtin.assert:
+    that:
+      - certbot_hook_dirs.results[0].stat.exists
+      - certbot_hook_dirs.results[0].stat.isdir
+      - certbot_hook_dirs.results[1].stat.exists
+      - certbot_hook_dirs.results[1].stat.isdir
+      - certbot_hook_dirs.results[2].stat.exists
+      - certbot_hook_dirs.results[2].stat.isdir
+    msg: |
+      Certbot renewal hook directories are not properly configured!
+      Directory status:
+      - pre: {{ certbot_hook_dirs.results[0].stat }}
+      - post: {{ certbot_hook_dirs.results[1].stat }}
+      - deploy: {{ certbot_hook_dirs.results[2].stat }}
+
+- name: Check if systemd is available
+  ansible.builtin.command: which systemctl
+  register: systemctl_check
+  ignore_errors: yes
+
+- name: Debug systemctl availability
+  ansible.builtin.debug:
+    var: systemctl_check
+
+- name: Check if running in container
+  ansible.builtin.stat:
+    path: /.dockerenv
+  register: docker_check
+
+- name: Debug container status
+  ansible.builtin.debug:
+    var: docker_check
+
+- name: Debug file permissions
+  ansible.builtin.command: "ls -la /etc/systemd/system/"
+  register: systemd_files
+  become: yes
+
+- name: Show systemd files
+  ansible.builtin.debug:
+    var: systemd_files
+
+- name: Try to create timer file directly in test
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/certbot.timer
+    mode: "0644"
+    owner: root
+    group: root
+    force: yes
+    content: |
+      [Unit]
+      Description=Certbot Renewal Timer
+
+      [Timer]
+      OnCalendar=*-*-* 00:00:00
+      RandomizedDelaySec=43200
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+  become: yes
+  register: test_timer_creation
+
+- name: Show test timer creation
+  ansible.builtin.debug:
+    var: test_timer_creation
+
+- name: Try to create service file directly in test
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/certbot.service
+    mode: "0644"
+    owner: root
+    group: root
+    force: yes
+    content: |
+      [Unit]
+      Description=Certbot Renewal Service
+      Documentation=https://certbot.eff.org/docs
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/bin/certbot renew --quiet --agree-tos
+
+      [Install]
+      WantedBy=multi-user.target
+  become: yes
+  register: test_service_creation
+
+- name: Show test service creation
+  ansible.builtin.debug:
+    var: test_service_creation
+
+- name: Verify timer file exists
+  ansible.builtin.stat:
+    path: /etc/systemd/system/certbot.timer
+  register: timer_file
+  become: yes
+
+- name: Show timer file status
+  ansible.builtin.debug:
+    var: timer_file
+
+- name: Verify service file exists
+  ansible.builtin.stat:
+    path: /etc/systemd/system/certbot.service
+  register: service_file
+  become: yes
+
+- name: Show service file status
+  ansible.builtin.debug:
+    var: service_file
+
+- name: Verify Certbot renewal timer is configured
+  ansible.builtin.assert:
+    that:
+      - timer_file.stat.exists
+      - service_file.stat.exists
+    msg: "Certbot renewal timer files are not properly configured!"
+
+- name: Verify certificate directory exists
+  ansible.builtin.stat:
+    path: "{{ certbot_cert_dir }}"
+  register: cert_dir
+  become: yes
+
+- name: Debug certificate directory
+  ansible.builtin.debug:
+    var: cert_dir
+
+- name: Verify renewal hooks directory exists
+  ansible.builtin.stat:
+    path: "{{ certbot_renewal_hooks_dir }}"
+  register: hooks_dir
+  become: yes
+
+- name: Debug hooks directory
+  ansible.builtin.debug:
+    var: hooks_dir
+
+- name: Check environment
+  ansible.builtin.stat:
+    path: /.dockerenv
+  register: dockerenv
+
+- name: Verify systemd or init.d configuration
+  block:
+    - name: Verify systemd files exist
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop:
+        - /etc/systemd/system/certbot.timer
+        - /etc/systemd/system/certbot.service
+      register: systemd_files
+      when: not dockerenv.stat.exists
+
+    - name: Verify init.d script exists
+      ansible.builtin.stat:
+        path: /etc/init.d/certbot-renew
+      register: init_script
+      when: dockerenv.stat.exists
+
+- name: Verify configuration
+  ansible.builtin.assert:
+    that:
+      - cert_dir.stat.exists
+      - hooks_dir.stat.exists
+      - (not dockerenv.stat.exists and systemd_files.results[0].stat.exists and systemd_files.results[1].stat.exists) or
+        (dockerenv.stat.exists and init_script.stat.exists)
+    msg: "Certbot configuration files are not properly configured!"

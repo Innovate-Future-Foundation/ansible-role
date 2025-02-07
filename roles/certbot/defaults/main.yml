@@ -1,0 +1,10 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for certbot
+
+# Certificate settings
+certbot_cert_dir: /etc/letsencrypt/live
+certbot_renewal_hooks_dir: /etc/letsencrypt/renewal-hooks
+
+# Certificate information
+certbot_common_name: "{{ ansible_fqdn | default(ansible_host) | default('localhost') }}"

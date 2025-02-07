@@ -1,0 +1,57 @@
+---
+- name: Configure Certbot
+  hosts: all
+  become: yes
+  vars:
+    certbot_cert_dir: /etc/letsencrypt/live
+    certbot_renewal_hooks_dir: /etc/letsencrypt/renewal-hooks
+    certbot_common_name: "{{ ansible_fqdn | default(ansible_host) | default('localhost') }}"
+  pre_tasks:
+    - name: Create tmp directory
+      ansible.builtin.file:
+        path: /var/tmp
+        state: directory
+        mode: "1777"
+      become: yes
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+
+  tasks:
+    - name: Debug playbook directory
+      ansible.builtin.debug:
+        msg: "Playbook directory: {{ playbook_dir }}"
+
+    - name: Include certbot role
+      ansible.builtin.include_role:
+        name: certbot
+
+    - name: Debug timer file
+      ansible.builtin.stat:
+        path: /etc/systemd/system/certbot.timer
+      register: timer_debug
+
+    - name: Show timer file status
+      ansible.builtin.debug:
+        var: timer_debug
+
+    - name: Debug service file
+      ansible.builtin.stat:
+        path: /etc/systemd/system/certbot.service
+      register: service_debug
+
+    - name: Show service file status
+      ansible.builtin.debug:
+        var: service_debug
+
+    - name: Run tests
+      ansible.builtin.include_tasks: test-certbot.yml

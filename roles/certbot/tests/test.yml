@@ -1,0 +1,42 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Certbot role test
+  hosts: all
+  remote_user: root
+  become: yes
+  pre_tasks:
+    - name: Create tmp directory
+      ansible.builtin.file:
+        path: /var/tmp
+        state: directory
+        mode: "1777"
+      become: yes
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+      register: apt_update
+
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+
+  tasks:
+    - name: Include certbot role
+      ansible.builtin.include_role:
+        name: "{{ playbook_dir }}/../.."
+
+    - name: Display APT update result
+      ansible.builtin.debug:
+        var: apt_update
+
+    - name: Collect package facts
+      ansible.builtin.package_facts:
+        manager: apt
+
+    - name: Test certbot configuration
+      ansible.builtin.include_tasks: test-certbot.yml
